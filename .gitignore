@@ -1,0 +1,7 @@
+.venv/
+deprecated/
+logs/
+__pycache__/
+utils/constants.py
+codes
+confidential.ini
