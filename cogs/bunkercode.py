@@ -6,8 +6,9 @@ from bot import BunkerBot
 from context import BBContext
 from datetime import datetime, timezone
 from discord.ext import commands
-from typing import List, NamedTuple, Optional
+from typing import Any, List, NamedTuple, Optional
 from utils.constants import BUNKER_CODE_DENIED
+from utils.pagination import EmbedViewPagination
 
 
 code_regex = re.compile(r'(([bvgc][liouy]+[wnm]+\w+er|al(ph|f)a) (?=code))|(^(what|know|may|plase|does|anyone)\s.*code'
@@ -64,6 +65,18 @@ class BunkerCodeView(discord.ui.View):
     async def shorten_code_message(self, _, interaction: discord.Interaction):
         await interaction.response.edit_message(view=None)
         self.stop()
+
+
+class ArtsPagination(EmbedViewPagination):
+    def __init__(self, data: List[Any], user: discord.Member):
+        super().__init__(data, per_page=1)
+        self.user = user
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user.id # type: ignore
+
+    async def format_page(self, data: List[asyncpg.Record]) -> discord.Embed:
+        return discord.Embed(description=f'Art by {data[0][1]}' if data[0][1] else 'Art by Devs').set_image(url=data[0][0])
 
 
 class bunkercode(commands.Cog):
@@ -233,8 +246,19 @@ class bunkercode(commands.Cog):
         ...
 
     @commands.command(disabled=True) # TODO
-    async def arts(self, ctx: BBContext):
-        ...
+    async def arts(self, ctx: BBContext, artist: Optional[discord.Member] = None):
+        if artist:
+            query = f'SELECT url, artist_name FROM {TABLE_ARTS} WHERE artist_id = $1 LIMIT 20'
+            args = [query, artist.id]
+        else:
+            query = f'SELECT url, artist_name FROM {TABLE_ARTS} ORDER BY random() LIMIT 20'
+            args = [query]
+
+        con = await ctx.get_connection()
+        data: List[asyncpg.Record] = await con.fetch(*args)
+
+        view = ArtsPagination(data, ctx.author)
+        await view.start(ctx.channel)
 
 def setup(bot: BunkerBot):
     bot.add_cog(bunkercode(bot))
