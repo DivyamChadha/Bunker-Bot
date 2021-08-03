@@ -28,7 +28,7 @@ class crater(commands.Cog):
         formatted_time = str(next_pvp_time - current_date).split(':')
 
         await ctx.send(
-            f'Next PVP is on {discord.utils.format_dt(next_pvp_time, "t")}, which is in{formatted_time[0]}h {formatted_time[1]}mins {formatted_time[2]}sec')
+            f'Next PVP is on {discord.utils.format_dt(next_pvp_time, "t")}, which is in {formatted_time[0]}h {formatted_time[1]}mins {formatted_time[2]}sec')
 
 
 def setup(bot: BunkerBot) -> None:
