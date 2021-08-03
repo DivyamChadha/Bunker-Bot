@@ -26,10 +26,9 @@ class eh(commands.Cog):
         """
 
         await ctx.release_connection()
-        
-        if ctx.command.has_error_handler or ctx.cog.has_error_handler: # type: ignore
-            return
 
+        if ctx.command.has_error_handler() or ctx.cog.has_error_handler(): # type: ignore
+            return
 
         ignored = (commands.CommandNotFound, )
         error = getattr(error, 'original', error)
@@ -42,16 +41,13 @@ class eh(commands.Cog):
 
         elif isinstance(error, commands.CommandOnCooldown):
             await ctx.send(f'Whoa slow down buddy! Retry in **{round(error.retry_after)}** seconds.', delete_after=10)
+        
+        elif isinstance(error, commands.UserInputError):
+            await ctx.send(str(error), delete_after=10)
 
-        elif isinstance(error, commands.CheckAnyFailure):
+        elif isinstance(error, commands.CheckFailure):
             await ctx.tick(False)
-
-        elif isinstance(error, commands.NoPrivateMessage):
-            try:
-                await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
-            except discord.HTTPException:
-                pass
-
+        
         else:
             print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
