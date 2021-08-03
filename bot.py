@@ -4,7 +4,7 @@ import logging
 
 from context import BBContext
 from discord.ext import commands
-from typing import Callable, List, Optional, Set
+from typing import Callable, List, Set
 
 
 async def release_connection(ctx: BBContext) -> None:
@@ -12,13 +12,12 @@ async def release_connection(ctx: BBContext) -> None:
 
 
 class BunkerBot(commands.Bot):
-    # db: database.DatabaseManager # TODO remove?
     pool: asyncpg.Pool
     logger: logging.Logger
     
     def __init__(self):
 
-        allowed_mentions = discord.AllowedMentions(everyone=False, users=True, roles=True, replied_user=True)
+        allowed_mentions = discord.AllowedMentions(everyone=True, users=True, roles=True, replied_user=True)
         intents = discord.Intents(
             bans=True,
             emojis=True,
@@ -34,7 +33,7 @@ class BunkerBot(commands.Bot):
         super().__init__(
             allowed_mentions = allowed_mentions,
             case_insensitive=True,
-            chunk_guilds_at_startup = False,
+            chunk_guilds_at_startup = True,
             command_prefix = command_prefix,
             intents=intents,
             member_cache_flags = member_cache_flags,
@@ -46,10 +45,11 @@ class BunkerBot(commands.Bot):
         self.times_code_is_asked: int = 0
         self.on_time = discord.utils.utcnow()
 
-    async def start(self, token: str, *, reconnect: bool) -> None:
+    async def start(self, token: str, *, reconnect: bool = True) -> None:
         async with self.pool.acquire() as con:
             blacklist = await con.fetchval('SELECT array_agg(user_id) FROM extras.blacklist')
-            self.blacklist = set(blacklist)
+            if blacklist:
+                self.blacklist = set(blacklist)
 
         return await super().start(token, reconnect=reconnect)
 

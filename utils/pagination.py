@@ -12,6 +12,7 @@ class EmbedViewPagination(discord.ui.View):
 
         self._data = [data[i*per_page:(i+1)*per_page] for i in range((len(data)+per_page-1)//per_page)]
         self._current_page = 0
+        self.per_page = per_page
     
     @property
     def max_pages(self) -> int:
