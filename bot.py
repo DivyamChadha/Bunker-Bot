@@ -1,10 +1,12 @@
+import logging
+import re
+from typing import Callable, List, Set
+
 import asyncpg
 import discord
-import logging
 
 from context import BBContext
 from discord.ext import commands
-from typing import Callable, List, Optional, Set
 
 
 async def release_connection(ctx: BBContext) -> None:
@@ -44,14 +46,6 @@ class BunkerBot(commands.Bot):
         self._after_invoke = release_connection
         self.blacklist: Set[int] = set()
         self.times_code_is_asked: int = 0
-        self.on_time = discord.utils.utcnow()
-
-    async def start(self, token: str, *, reconnect: bool) -> None:
-        async with self.pool.acquire() as con:
-            blacklist = await con.fetchval('SELECT array_agg(user_id) FROM extras.blacklist')
-            self.blacklist = set(blacklist)
-
-        return await super().start(token, reconnect=reconnect)
 
     async def close(self):
         try:
