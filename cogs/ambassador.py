@@ -69,7 +69,7 @@ class FlareView(discord.ui.View):
 
 class InRolePagination(EmbedViewPagination):
     def __init__(self, person: discord.Member, data: List[discord.Member]):
-        super().__init__(data, timeout=180.0, per_page=2)
+        super().__init__(data, timeout=180.0, per_page=20)
         self.person = person
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
