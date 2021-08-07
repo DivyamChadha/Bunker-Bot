@@ -10,11 +10,9 @@ from typing import Any, List, NamedTuple, Optional
 from utils.constants import BUNKER_CODE_DENIED
 from utils.pagination import EmbedViewPagination
 
-
 code_regex = re.compile(r'(([bvgc][liouy]+[wnm]+\w+er|al(ph|f)a) (?=code))|(^(what|know|may|plase|does|anyone)\s.*code'
                         r'.*\??$)(?!^code)|((today).*code.*([bvgc][liouy]+[wnm]+\w+er|al(ph|f)a)?\??)|(code (?=([bvgc]'
                         r'[liouy]+[wnm]+\w+er|al(ph|f)a)))|(^![bvgc][liouy]+[wnm]+\w+er\s?[cv]o[df]e)', re.IGNORECASE)
-
 
 CHANNEL_COOLDOWN = commands.CooldownMapping.from_cooldown(1.0, 300.0, commands.BucketType.user)
 USER_COOLDOWN = commands.CooldownMapping.from_cooldown(1.0, 300.0, commands.BucketType.user)
@@ -43,6 +41,7 @@ class BunkerCodeView(discord.ui.View):
     artist_name: Optional[str]
         User name of artist
     """
+
     def __init__(self, code: str, url: str, artist: Optional[str] = None) -> None:
         super().__init__()
         self.code = code
@@ -73,10 +72,31 @@ class ArtsPagination(EmbedViewPagination):
         self.user = user
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.user.id # type: ignore
+        return interaction.user.id == self.user.id  # type: ignore
 
     async def format_page(self, data: List[asyncpg.Record]) -> discord.Embed:
-        return discord.Embed(description=f'Art by {data[0][1]}' if data[0][1] else 'Art by Devs').set_image(url=data[0][0])
+        return discord.Embed(description=f'Art by {data[0][1]}' if data[0][1] else 'Art by Devs').set_image(
+            url=data[0][0])
+
+
+class ArtsLeaderboardPagination(EmbedViewPagination):
+    def __init__(self, data: List[Any], user: discord.Member):
+        super().__init__(data, per_page=5)
+        self.user = user
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user.id  # type: ignore
+
+    async def format_page(self, data: List[asyncpg.Record]) -> discord.Embed:
+        embed = discord.Embed(title="Art Contributions Leaderboard", description=f'Fun fact: The person who made this command likes to eat socks')
+        position = self._current_page * self.per_page
+        embed.set_footer(text=f'Page {self._current_page + 1}/{len(self._data)}')
+        for i in range(len(data)):
+            embed.add_field(name="Position", value=position+1, inline=True)
+            embed.add_field(name="Artist", value=data[i][0], inline=True)
+            embed.add_field(name="Art Contributed", value=f"{data[i][1]}", inline=True)
+            position += 1
+        return embed
 
 
 class bunkercode(commands.Cog):
@@ -84,6 +104,7 @@ class bunkercode(commands.Cog):
     Bunker Bot module to provide the bunker code functionality
     """
     _codes: List[str]
+
     def __init__(self, bot: BunkerBot) -> None:
         self.bot = bot
         self.code_enabled: bool = True
@@ -119,7 +140,7 @@ class bunkercode(commands.Cog):
         """
         day = discord.utils.utcnow().day
         return self._codes[int(day)]
-    
+
     async def _get_art(self) -> Art:
         """
         Returns an Art to be used inside code message
@@ -129,7 +150,7 @@ class bunkercode(commands.Cog):
                 query = f'SELECT url, artist_id, artist_name FROM {TABLE_ARTS} ORDER BY random() LIMIT 20'
                 rows: List[asyncpg.Record] = await con.fetch(query)
                 self.arts_cache = [Art(url, artist_id, artist_name) for (url, artist_id, artist_name) in rows]
-        
+
         return self.arts_cache.pop()
 
     @commands.Cog.listener(name='on_message')
@@ -160,9 +181,13 @@ class bunkercode(commands.Cog):
             retry_after2 = channel_bucket.update_rate_limit()
 
             if retry_after1:
-                await message.channel.send(content=f'Hey, {message.author.mention}! You just used that command, please wait {int(retry_after1)} seconds... The code is **{self.code}**', delete_after=10)
+                await message.channel.send(
+                    content=f'Hey, {message.author.mention}! You just used that command, please wait {int(retry_after1)} seconds... The code is **{self.code}**',
+                    delete_after=10)
             elif retry_after2:
-                await message.channel.send(content=f'Hey, {message.author.mention}! That command was just used in this channel, please wait {int(retry_after2)} seconds... The code is **{self.code}**.', delete_after=10)
+                await message.channel.send(
+                    content=f'Hey, {message.author.mention}! That command was just used in this channel, please wait {int(retry_after2)} seconds... The code is **{self.code}**.',
+                    delete_after=10)
             else:
                 embed = discord.Embed(title=f'Bunker Code: {self.code}')
                 art = await self._get_art()
@@ -237,15 +262,22 @@ class bunkercode(commands.Cog):
         await con.execute(query, url)
         await ctx.tick(True)
 
-    @settings.command(name='batch-add', aliases=['ba']) # TODO
-    async def batch_add(self, ctx: BBContext):
-        ...
-
-    @commands.command(disabled=True) # TODO
+    @commands.command(disabled=True)  # TODO
     async def artists(self, ctx: BBContext):
-        ...
+        query = """SELECT DISTINCT artist_name, COUNT(*)
+                    FROM extras.arts
+                    WHERE artist_name IS NOT NULL
+                    GROUP BY artist_name
+                    ORDER BY COUNT(*) DESC"""
 
-    @commands.command(disabled=True) # TODO
+        args = [query]
+
+        con = await ctx.get_connection()
+        data: List[asyncpg.Record] = await con.fetch(*args)
+        view = ArtsLeaderboardPagination(data, ctx.author)
+        await view.start(ctx.channel)
+
+    @commands.command(disabled=True)  # TODO
     async def arts(self, ctx: BBContext, artist: Optional[discord.Member] = None):
         if artist:
             query = f'SELECT url, artist_name FROM {TABLE_ARTS} WHERE artist_id = $1 LIMIT 20'
@@ -259,6 +291,7 @@ class bunkercode(commands.Cog):
 
         view = ArtsPagination(data, ctx.author)
         await view.start(ctx.channel)
+
 
 def setup(bot: BunkerBot):
     bot.add_cog(bunkercode(bot))
