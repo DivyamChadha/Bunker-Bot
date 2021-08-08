@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from discord.ext import commands
 from typing import Any, List, NamedTuple, Optional
 from utils.constants import BUNKER_CODE_DENIED
-from utils.pagination import EmbedViewPagination
+from utils.views import EmbedViewPagination
 
 code_regex = re.compile(r'(([bvgc][liouy]+[wnm]+\w+er|al(ph|f)a) (?=code))|(^(what|know|may|plase|does|anyone)\s.*code'
                         r'.*\??$)(?!^code)|((today).*code.*([bvgc][liouy]+[wnm]+\w+er|al(ph|f)a)?\??)|(code (?=([bvgc]'

@@ -6,7 +6,7 @@ from discord.ext import commands
 from random import choice
 from typing import Callable, List, Optional
 from utils.constants import staff_lounge, ambassadors_lounge, training_room
-from utils.pagination import EmbedViewPagination
+from utils.views import EmbedViewPagination
 
 
 EMOJI_LOUDSPEAKER = ':loudspeaker: '
