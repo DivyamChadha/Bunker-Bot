@@ -262,7 +262,7 @@ class bunkercode(commands.Cog):
         await con.execute(query, url)
         await ctx.tick(True)
 
-    @commands.command(disabled=True)  # TODO
+    @commands.command()
     async def artists(self, ctx: BBContext):
         query = """SELECT DISTINCT artist_name, COUNT(*)
                     FROM extras.arts
@@ -277,7 +277,7 @@ class bunkercode(commands.Cog):
         view = ArtsLeaderboardPagination(data, ctx.author)
         await view.start(ctx.channel)
 
-    @commands.command(disabled=True)  # TODO
+    @commands.command()
     async def arts(self, ctx: BBContext, artist: Optional[discord.Member] = None):
         if artist:
             query = f'SELECT url, artist_name FROM {TABLE_ARTS} WHERE artist_id = $1 LIMIT 20'
