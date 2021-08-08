@@ -4,8 +4,6 @@ import difflib
 import discord
 import json
 
-from discord import user
-
 from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands
