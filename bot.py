@@ -42,6 +42,7 @@ class BunkerBot(commands.Bot):
 
         self._after_invoke = release_connection
         self.blacklist: Set[int] = set()
+        self.tags: Set[str] = set()
         self.times_code_is_asked: int = 0
         self.on_time = discord.utils.utcnow()
 
@@ -50,6 +51,10 @@ class BunkerBot(commands.Bot):
             blacklist = await con.fetchval('SELECT array_agg(user_id) FROM extras.blacklist')
             if blacklist:
                 self.blacklist = set(blacklist)
+
+            tags = await con.fetchval('SELECT array_agg(name) FROM tags.names')
+            if tags:
+                self.tags = set(tags)
 
         return await super().start(token, reconnect=reconnect)
 

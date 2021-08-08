@@ -4,6 +4,28 @@ import discord
 from typing import Any, List, Optional
 
 
+class Confirm(discord.ui.View):
+    def __init__(self, user_id: int, *, timeout: Optional[float] = 180.0):
+        super().__init__(timeout=timeout)
+        self.result = False
+        self.user_id = user_id
+
+    @discord.ui.button(label='✓', style=discord.ButtonStyle.green)
+    async def accept(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.result = True
+        await interaction.response.edit_message(content='✓', view=None)
+        self.stop()
+
+    @discord.ui.button(label='✘', style=discord.ButtonStyle.red)
+    async def deny(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.result = False
+        await interaction.response.edit_message(content='✘', view=None)
+        self.stop()
+    
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id # type: ignore
+
+
 class EmbedViewPagination(discord.ui.View):
 
     message: discord.Message

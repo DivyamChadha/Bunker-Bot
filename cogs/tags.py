@@ -1,12 +1,16 @@
 from __future__ import annotations
 import asyncpg
+import difflib
 import discord
 import json
+
+from discord import user
 
 from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands
 from typing import Dict, List, Optional, Union
+from utils.views import Confirm, EmbedViewPagination
 
 
 TABLE_CONTENT = 'tags.content'
@@ -228,12 +232,36 @@ class TagSelectOptionFlagsUpdate(TagSelectOptionFlags):
     label: str = commands.flag(aliases=['l'], default=None)
 
 
+class TagsListPages(EmbedViewPagination):
+    def __init__(self, data: List[str], user_id: int):
+        super().__init__(data, per_page=10)
+        self.user_id = user_id
+
+    async def format_page(self, data: List[str]) -> discord.Embed:
+        embed = discord.Embed(description='\n'.join(f'{i}) {name}' for i, name in enumerate(data)))
+        embed.set_footer(text=f'{self.current_page}/{self.max_pages}')
+        return embed
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return self.user_id == interaction.user.id # type: ignore
+
+
 class tags(commands.Cog):
     def __init__(self, bot: BunkerBot) -> None:
         self.bot = bot
 
     @commands.group(invoke_without_command=True, aliases=['tags'])
     async def tag(self, ctx: BBContext, *, name: str):
+        if name not in self.bot.tags:
+            matches = difflib.get_close_matches(name, self.bot.tags, n=5)
+
+            if matches:
+                t = '\n'.join(matches)
+                embed = discord.Embed(title=f'Could not find the tag {name}', description=f'Did you mean:\n{t}')
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send(f'Could not find the tag {name}')
+
         query = f'SELECT tags.get_tag($1)'
         con = await ctx.get_connection()
 
@@ -263,11 +291,12 @@ class tags(commands.Cog):
     async def create(self, ctx: BBContext, name: str, *, content: str):
         con = await ctx.get_connection()
         query = f'WITH content AS (INSERT INTO {TABLE_CONTENT}(content) VALUES($2) RETURNING id ) \
-                  INSERT INTO {TABLE_NAMES}(name, id, alias_to) SELECT $1, id, $1 FROM content RETURNING id'
+                  INSERT INTO {TABLE_NAMES}(name, id) SELECT $1, id FROM content RETURNING id'
 
         try:
             tag_id = await con.fetchval(query, name, content)
             await ctx.send(f'Tag with Name: **{name}** and ID: **{tag_id}** has been created.')
+            self.bot.tags.add(name)
         except asyncpg.exceptions.UniqueViolationError:
             await ctx.send(f'Tag with name: **{name}** already exists')
 
@@ -416,6 +445,129 @@ class tags(commands.Cog):
                 return await ctx.tick()
 
             await ctx.send(f'Tag with ID: **{tag_id}** does not exist')
+    
+    @tag.command(name='remove-component', aliases=['removecomponent', 'rc'])
+    async def remove_component(self, ctx: BBContext, tag_id: int, component_id: int):
+        con = await ctx.get_connection()
+        query = "UPDATE tags.content SET component_ids = array_remove(COALESCE(component_ids, '{}'::int[]), $1) WHERE id = $2"
+
+        val  = await con.execute(query, component_id, tag_id)
+        if val == 'UPDATE 1':
+            return await ctx.tick()
+
+        await ctx.send(f'Tag with ID: **{tag_id}** does not exist')
+
+    @tag.group(invoke_without_command=True)
+    async def delete(self, ctx: BBContext, tag_id: int): # must remove any component pointing to it as well
+        confirm = Confirm(ctx.author.id)
+        await ctx.send(f'Are you sure you want to delete Tag with ID: **{tag_id}**.', view=confirm)
+        await confirm.wait()
+        if not confirm.result:
+            return
+
+        con = await ctx.get_connection()
+        query = f'WITH row AS (DELETE FROM {TABLE_NAMES} WHERE id = $1 RETURNING name), \
+                  _ AS (DELETE FROM {TABLE_CONTENT} WHERE id = $1) \
+                  SELECT array_agg(name) FROM row'
+        
+        try:
+            val = await con.fetchval(query, tag_id)
+        except asyncpg.exceptions.ForeignKeyViolationError:
+            await ctx.send(f'There are components still refering to this tag. Please first delete any component with tag_id: **{tag_id}**')
+        else:
+
+            if val:
+                names = ', '.join(val)
+                self.bot.tags -= set(val)
+                await ctx.send(f'Tag with Tag ID **({tag_id})** has been deleted. The following can not be used anymore: **{names}**')
+            else:
+                await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
+
+    @delete.command(name='embed')
+    async def delete_embed(self, ctx: BBContext, tag_id: int):
+        confirm = Confirm(ctx.author.id)
+        await ctx.send(f'Are you sure you want to delete embed in Tag with ID: **{tag_id}**.\nNote: The tag will not be deleted and the embed can be added again using `b!tag update embed` command.', view=confirm)
+        await confirm.wait()
+        if not confirm.result:
+            return
+
+        con = await ctx.get_connection()
+        query = f'UPDATE {TABLE_CONTENT} SET embed = NULL WHERE id = $1'
+        val = await con.execute(query, tag_id)
+
+        if val == 'UPDATE 1':
+            await ctx.tick()
+        else:
+            await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
+
+    @delete.command(name='component')
+    async def delete_component(self, ctx: BBContext, component_id: int): # must remove from each array where present
+        confirm = Confirm(ctx.author.id)
+        await ctx.send(f'Are you sure you want to delete the component with ID: **{component_id}**.', view=confirm)
+        await confirm.wait()
+        if not confirm.result:
+            return
+
+        con = await ctx.get_connection()
+        query = f'DELETE FROM {TABLE_COMPONENTS} WHERE id = $1'
+        val = await con.execute(query, component_id)
+        
+        if val == 'UPDATE 1':
+            await ctx.tick()
+        else:
+            await ctx.send(f'Component with ID: **{component_id}** does not exist.')
+
+    @tag.command(name='list', aliases=['show'])
+    async def show(self, ctx: BBContext):
+        tags_list = sorted(self.bot.tags, key=lambda tag_name: tag_name)
+        view = TagsListPages(tags_list, ctx.author.id)
+        await view.start(ctx.channel)
+
+    @tag.command()
+    async def search(self, ctx: BBContext, *, name: str):
+        matches = difflib.get_close_matches(name, self.bot.tags, n=5)
+
+        if matches:
+            t = '\n'.join(matches)
+            embed = discord.Embed(title=f'Tag search: {name}', description=f'Found:\n{t}')
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Could not find the tag **{name}**')
+
+    @create.command(name='alias')
+    async def create_alias(self, ctx: BBContext, tag_id: int, *, alias_name: str):
+        con = await ctx.get_connection()
+        query = f'INSERT INTO {TABLE_NAMES}(name, id) VALUES($1, $2)'
+
+        try:
+            await con.execute(query, tag_id, alias_name)
+        except asyncpg.exceptions.ForeignKeyViolationError:
+            await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
+        except asyncpg.exceptions.UniqueViolationError:
+            await ctx.send(f'Can not create alias with name **{alias_name}**. Tag with such name already exists.')
+        else:
+            await ctx.tick()
+
+    @delete.command(name='alias')
+    async def delete_alias(self, ctx: BBContext, tag_id: int, *, alias_name: str):
+        con = await ctx.get_connection()
+        async with con.transaction():
+            query = 'SELECT COUNT(id) WHERE id = $1'
+            l = await con.fetchval(query, tag_id)
+
+            if not l:
+                return await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
+
+            if l < 2:
+                return await ctx.send(f'Can not delete the only available name for tag with ID: **{tag_id}**. Create more aliases to do so.')
+
+            query = f'DELETE FROM {TABLE_NAMES} WHERE id = $1 and name = $2'
+            val = await con.execute(query, tag_id, alias_name)
+
+            if val == 'DELETE 0':
+                await ctx.send(f'Tag with ID: **{tag_id}** does not have an alias called **{alias_name}**')
+            else:
+                await ctx.tick()
 
 
 def setup(bot: BunkerBot) -> None:
