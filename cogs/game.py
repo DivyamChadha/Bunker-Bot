@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 
 import asyncpg
 import discord
@@ -10,6 +11,7 @@ from utils.constants import MR_K, SIGNAL, TICKET
 from discord.ext import commands
 from random import randint, choices
 from typing import List, Tuple, Dict
+from utils.levels import LeaderboardPlayer
 
 
 TABLE_CURRENCY = 'events.currency'
@@ -127,10 +129,9 @@ class PayoutButton(discord.ui.Button):
     
     async def callback(self, interaction: discord.Interaction):
         embed = discord.Embed(description='Well done survivor. Come back tomorrow for another task.').set_image(url=MR_K)
-        query = f'INSERT INTO {TABLE_CURRENCY}(user_id, tickets) VALUES($1, $2) ON CONFLICT(user_id) DO UPDATE SET tickets = coalesce({TABLE_CURRENCY}.tickets, 0) + $2'
         
         async with self.view.bot.pool.acquire() as con:
-            await con.execute(query, self.view.player.id, self.view.player_score)
+            await self.view.player.update(con, tickets=self.view.player_score)
         
         await interaction.response.edit_message(embed=embed, view=None)
         self.view.stop()
@@ -142,8 +143,8 @@ class GameView(discord.ui.View):
 
     Parameters
     -----------
-    player: discord.Member
-        The survivor playing the game
+    player: LeaderboardPlayer
+        The user playing the game
     game_names: List[Tuple[str, int]]
         A list of (game_name, game_id) tuples
 
@@ -157,7 +158,7 @@ class GameView(discord.ui.View):
 
     bot: BunkerBot
     situations: List[Situation]
-    def __init__(self, player: discord.Member, game_names: List[Tuple[str, int]]):
+    def __init__(self, player: LeaderboardPlayer, game_names: List[Tuple[str, int]]):
         super().__init__()
         self.player = player
         self.player_score: int = 0
@@ -199,7 +200,7 @@ class GameView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return self.player.id == interaction.user.id # type: ignore
+        return self.player.user.id == interaction.user.id # type: ignore
 
 
 
@@ -219,9 +220,14 @@ class game(commands.Cog):
     
 
     @commands.command() # TODO name?
-    async def test(self, ctx: BBContext) -> None:
+    async def test(self, ctx: BBContext):
+        player = await LeaderboardPlayer.fetch(await ctx.get_connection(), ctx.author)
+
+        if player.level < 1:
+            return await ctx.send('You must be at least level 1 to play the game :(')
+
         embed = discord.Embed(description="Hey survivor!\nCan you do me favor? Don't worry you succeed and you get payed well").set_image(url=MR_K)
-        game = GameView(ctx.author, choices(self.games, k=1))
+        game = GameView(player, choices(self.games, k=1)) # TODO add more events and change k to 3
         game.bot = self.bot
         await ctx.send(embed=embed, view=game)
 
