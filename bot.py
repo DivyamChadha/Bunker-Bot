@@ -1,10 +1,11 @@
+import re
 import asyncpg
 import discord
 import logging
 
 from context import BBContext
 from discord.ext import commands
-from typing import Callable, Dict, List, Set
+from typing import Callable, Dict, List, Optional, Set, Union
 from utils.constants import TABLE_LEADERBOARD
 
 
@@ -87,3 +88,15 @@ class BunkerBot(commands.Bot):
                       ON CONFLICT(user_id) \
                       DO UPDATE SET xp = {TABLE_LEADERBOARD}.xp + $2'
             await con.executemany(query, _data.items())
+
+    async def getch_member(self, guild: discord.Guild, user_id: int) -> Union[discord.Member, int]:
+        member = guild.get_member(user_id)
+        if member:
+            return member
+
+        try:
+            member = await guild.fetch_member(user_id)
+        except discord.HTTPException:
+            return user_id
+        else:
+            return member
