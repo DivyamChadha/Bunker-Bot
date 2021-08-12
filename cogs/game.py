@@ -236,11 +236,8 @@ class ChooseGameSelect(discord.ui.Select):
         for option in next_situation.options:
             self.view.add_item(GameButton(option))
         
-        embed = discord.Embed(description=next_situation.desciption).set_image(url=SIGNAL)
+        embed = discord.Embed(description=f'Total: {self.view.player_score} {TICKET}\n{next_situation.desciption}').set_image(url=SIGNAL)
         await interaction.response.edit_message(embed=embed, view=self.view)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return self.player.user.id == interaction.user.id # type: ignore
 
 
 class GameView(discord.ui.View):
