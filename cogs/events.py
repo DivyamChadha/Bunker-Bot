@@ -1,5 +1,3 @@
-import re
-import asyncpg
 import discord
 
 from bot import BunkerBot
@@ -174,7 +172,7 @@ class events(commands.Cog):
 
         if player.level < 1:
             return await ctx.send('Coins can not be added to anyone below level 1')
-            
+
         await player.update(con, coins=coins)
         await ctx.tick()
 
