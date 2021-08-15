@@ -231,12 +231,32 @@ class TagSelectOptionFlagsUpdate(TagSelectOptionFlags):
 
 
 class TagsListPages(EmbedViewPagination):
-    def __init__(self, data: List[str], user_id: int):
+    """
+    Button paginator used to display all tags in the database
+    """
+    def __init__(self, data: List[asyncpg.Record], user_id: int):
         super().__init__(data, per_page=10)
         self.user_id = user_id
 
-    async def format_page(self, data: List[str]) -> discord.Embed:
-        embed = discord.Embed(description='\n'.join(f'{i}) {name}' for i, name in enumerate(data)))
+    async def format_page(self, data: List[asyncpg.Record]) -> discord.Embed:
+        embed = discord.Embed(title='Tags', description='\n'.join(f'{i+1}) **{record["name"]}** (ID: {record["id"]})' for i, record in enumerate(data)))
+        embed.set_footer(text=f'{self.current_page}/{self.max_pages}')
+        return embed
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return self.user_id == interaction.user.id # type: ignore
+
+
+class ComponentListPages(EmbedViewPagination):
+    """
+    Button paginator used to display all components in the database
+    """
+    def __init__(self, data: List[asyncpg.Record], user_id: int):
+        super().__init__(data, per_page=10)
+        self.user_id = user_id
+
+    async def format_page(self, data: List[asyncpg.Record]) -> discord.Embed:
+        embed = discord.Embed(title='Components', description='\n'.join(f'{i+1}) {record["type"]} (ID: **{record["id"]}**) (References tag: **{record["tag_id"]}**)' for i, record in enumerate(data)))
         embed.set_footer(text=f'{self.current_page}/{self.max_pages}')
         return embed
 
@@ -248,7 +268,7 @@ class tags(commands.Cog):
     def __init__(self, bot: BunkerBot) -> None:
         self.bot = bot
 
-    @commands.group(invoke_without_command=True, aliases=['tags'])
+    @commands.group(invoke_without_command=True, aliases=['tags', 't'])
     async def tag(self, ctx: BBContext, *, name: str):
         if name not in self.bot.tags:
             matches = difflib.get_close_matches(name, self.bot.tags, n=5)
@@ -517,8 +537,10 @@ class tags(commands.Cog):
 
     @tag.command(name='list', aliases=['show'])
     async def show(self, ctx: BBContext):
-        tags_list = sorted(self.bot.tags, key=lambda tag_name: tag_name)
-        view = TagsListPages(tags_list, ctx.author.id)
+        con = await ctx.get_connection()
+        query = f'SELECT name, id FROM {TABLE_NAMES} ORDER BY name'
+        rows = await con.fetch(query)
+        view = TagsListPages(rows, ctx.author.id)
         await view.start(ctx.channel)
 
     @tag.command()
@@ -566,6 +588,15 @@ class tags(commands.Cog):
                 await ctx.send(f'Tag with ID: **{tag_id}** does not have an alias called **{alias_name}**')
             else:
                 await ctx.tick()
+
+    @tag.command(aliases=['component'])
+    @commands.has_guild_permissions(administrator=True)
+    async def components(self, ctx: BBContext):
+        con = await ctx.get_connection()
+        query = f'SELECT id, type, tag_id FROM {TABLE_COMPONENTS} ORDER BY id'
+        rows = await con.fetch(query)
+        view = ComponentListPages(rows, ctx.author.id)
+        await view.start(ctx.channel)
 
 
 def setup(bot: BunkerBot) -> None:
