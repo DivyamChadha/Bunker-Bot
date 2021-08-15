@@ -139,6 +139,9 @@ def create_components(data: List[str]) -> List[Union[TagButton, TagSelect]]:
     data: List[str]
         list of jsonb objects
     """
+    if not data:
+        return []
+
     components: List[Union[TagButton, TagSelect]] = []
     select_options = []
 
@@ -370,6 +373,17 @@ class tags(commands.Cog):
     async def update(self, ctx: BBContext) -> None:
         pass
 
+    @update.command(name='content')
+    async def update_content(self, ctx: BBContext, tag_id: int, *, content: str):
+        con = await ctx.get_connection()
+        query = f'UPDATE {TABLE_CONTENT} SET content = $2 WHERE id = $1'
+        val = await con.execute(query, tag_id, content)
+
+        if val == 'UPDATE 1':
+            await ctx.tick()
+        else:
+            await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
+
     @update.command(name='embed')
     async def update_embed(self, ctx: BBContext, *, flags: TagEmbedFlags):      
         if not (bool(flags.title) or bool(flags.footer) or bool(flags.description) or bool(flags.image) or bool(flags.color)):
@@ -388,7 +402,7 @@ class tags(commands.Cog):
                 await con.execute("UPDATE tags.content SET embed = jsonb_set(COALESCE(embed, '{}'::jsonb), '{description}', $1::jsonb) WHERE id = $2", json.dumps(flags.description), flags.tagid)
 
             if flags.color:
-                await con.execute("UPDATE tags.content SET embed = jsonb_set(COALESCE(embed, '{}'::jsonb), '{color}', $1::jsonb) WHERE id = $2", json.dumps(str(flags.color)), flags.tagid)
+                await con.execute("UPDATE tags.content SET embed = jsonb_set(COALESCE(embed, '{}'::jsonb), '{color}', $1::jsonb) WHERE id = $2", json.dumps(flags.color.value), flags.tagid)
 
             if flags.footer:
                 await con.execute("UPDATE tags.content SET embed = jsonb_set(COALESCE(embed, '{}'::jsonb), '{footer}', $1::jsonb) WHERE id = $2", json.dumps({'text': flags.footer}), flags.tagid)
@@ -501,10 +515,27 @@ class tags(commands.Cog):
             else:
                 await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
 
+    @delete.command(name='content')
+    async def delete_content(self, ctx: BBContext, tag_id: int):
+        confirm = Confirm(ctx.author.id)
+        await ctx.send(f'Are you sure you want to remove text content in Tag with ID: **{tag_id}**.\nNote: The tag will not be deleted and the content can be added again using `b!tag update content` command.\n**Warning: The tag needs at least content or embed to work properly.**', view=confirm)
+        await confirm.wait()
+        if not confirm.result:
+            return
+
+        con = await ctx.get_connection()
+        query = f'UPDATE {TABLE_CONTENT} SET content = NULL WHERE id = $1'
+        val = await con.execute(query, tag_id)
+
+        if val == 'UPDATE 1':
+            await ctx.tick()
+        else:
+            await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
+
     @delete.command(name='embed')
     async def delete_embed(self, ctx: BBContext, tag_id: int):
         confirm = Confirm(ctx.author.id)
-        await ctx.send(f'Are you sure you want to delete embed in Tag with ID: **{tag_id}**.\nNote: The tag will not be deleted and the embed can be added again using `b!tag update embed` command.', view=confirm)
+        await ctx.send(f'Are you sure you want to delete embed in Tag with ID: **{tag_id}**.\nNote: The tag will not be deleted and the embed can be added again using `b!tag update embed` command.\n**Warning: The tag needs at least content or embed to work properly.**', view=confirm)
         await confirm.wait()
         if not confirm.result:
             return
@@ -560,12 +591,13 @@ class tags(commands.Cog):
         query = f'INSERT INTO {TABLE_NAMES}(name, id) VALUES($1, $2)'
 
         try:
-            await con.execute(query, tag_id, alias_name)
+            await con.execute(query, alias_name, tag_id)
         except asyncpg.exceptions.ForeignKeyViolationError:
             await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
         except asyncpg.exceptions.UniqueViolationError:
             await ctx.send(f'Can not create alias with name **{alias_name}**. Tag with such name already exists.')
         else:
+            self.bot.tags.add(alias_name)
             await ctx.tick()
 
     @delete.command(name='alias')
@@ -587,6 +619,7 @@ class tags(commands.Cog):
             if val == 'DELETE 0':
                 await ctx.send(f'Tag with ID: **{tag_id}** does not have an alias called **{alias_name}**')
             else:
+                self.bot.tags.remove(alias_name)
                 await ctx.tick()
 
     @tag.command(aliases=['component'])
