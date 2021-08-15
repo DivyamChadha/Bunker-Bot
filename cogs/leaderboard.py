@@ -6,7 +6,7 @@ from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands, tasks
 from typing import Callable, Dict, List, Union
-from utils.constants import TABLE_LB_CONFIG, TABLE_LEADERBOARD, TICKET, NO_XP_CHANNELS
+from utils.constants import TABLE_LB_CONFIG, TABLE_LEADERBOARD, TICKET, NO_XP_CHANNELS, COINS
 from utils.levels import LeaderboardPlayer
 from utils.views import EmbedViewPagination
 
@@ -67,8 +67,7 @@ class leaderboard(commands.Cog):
         except KeyError:
             self.bot.xp_cache[message.author.id] = self.xp_channel_mapping.get(message.channel.id, DEFAULT_XP)
 
-    # @tasks.loop(minutes=10) TODO remove
-    @tasks.loop(seconds=10)
+    @tasks.loop(minutes=10)
     async def xp_task(self) -> None:
         """
         Task that updates the xp from memory to db every 10 minutes
@@ -81,12 +80,7 @@ class leaderboard(commands.Cog):
         player = await LeaderboardPlayer.fetch(con, ctx.author)
         embed = discord.Embed(
             title=f'{ctx.author.name}#{ctx.author.discriminator}', 
-            description=f'Level: **{player.level}**\n\
-                          XP: **{player.xp}**\n\
-                          Coins: **{player.coins}**\n\
-                          Tickets: **{player.tickets}** {TICKET}'
-            )
-            # TODO add event coin emoji
+            description=f'Level: **{player.level}**\nXP: **{player.xp}**\nCoins: **{player.coins}**  {COINS}\nTickets: **{player.tickets}** {TICKET}')
 
         await ctx.send(embed=embed)
 
