@@ -12,6 +12,7 @@ from utils.views import EmbedViewPagination
 
 
 DEFAULT_XP = 0.01
+XP_COOLDOWN = commands.CooldownMapping.from_cooldown(1.0, 60.0, commands.BucketType.user)
 
 
 class LevelConfigPages(EmbedViewPagination):
@@ -62,6 +63,10 @@ class leaderboard(commands.Cog):
         if message.author.bot or message.channel.id in NO_XP_CHANNELS:
             return
 
+        bucket = XP_COOLDOWN.get_bucket(message)
+        if bucket.update_rate_limit():
+            return
+
         try:
             self.bot.xp_cache[message.author.id] += self.xp_channel_mapping.get(message.channel.id, DEFAULT_XP)
         except KeyError:
@@ -74,7 +79,8 @@ class leaderboard(commands.Cog):
         """
         await self.bot.update_xp()
 
-    @commands.group(invoke_without_command=True, aliases=['xp'])
+    @commands.group(invoke_without_command=True, aliases=['xp', 'tickets', 'coins'])
+    @commands.cooldown(1, 60.0, commands.BucketType.member)
     async def level(self, ctx: BBContext):
         con = await ctx.get_connection()
         player = await LeaderboardPlayer.fetch(con, ctx.author)
@@ -95,6 +101,7 @@ class leaderboard(commands.Cog):
         await view.start(ctx.channel)
 
     @commands.command(name='leaderboard', aliases=['lb'])
+    @commands.cooldown(1, 60.0, commands.BucketType.member)
     async def show_leaderboard(self, ctx: BBContext):
         con = await ctx.get_connection()
         query = f'SELECT user_id, xp FROM {TABLE_LEADERBOARD} ORDER BY xp DESC LIMIT 100'
