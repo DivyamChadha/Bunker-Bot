@@ -9,10 +9,16 @@ from context import BBContext
 from utils.constants import MR_K, SIGNAL, TICKET
 from discord.ext import commands
 from random import randint, choices
-from typing import List, Tuple, Dict
+from typing import List, Optional, Tuple, Dict
+from utils.levels import LeaderboardPlayer
 
 
 TABLE_CURRENCY = 'events.currency'
+AWARDS = { # difficulty_level: (min reward, max reward)
+    75: (10, 20), # easy
+    45: (30, 50), # medium
+    25: (80, 100) # hard
+}
 
 
 class Situation:
@@ -55,9 +61,7 @@ class GameButton(discord.ui.Button):
         )
     
     async def callback(self, interaction: discord.Interaction):
-        outcome = self.view.determine_situation_successs
-        diff = self.view.difficulty
-        profit = randint(4*diff, 8*diff) if outcome else -randint(2*diff, 5*diff)
+        outcome, profit = self.view.determine_situation_successs
         self.view.player_score += profit
         self.view.clear_items()
 
@@ -66,11 +70,35 @@ class GameButton(discord.ui.Button):
             if outcome_bool == outcome:
                 break
 
-        if self.view.situations:
-            self.view.add_item(SegwayButton(self.view.situations.pop()))
-            embed = discord.Embed(description=f'{outcome_response}. You earned {profit} {TICKET}' if profit > 0 else f'You lost {-profit} {TICKET}').set_image(url=SIGNAL)
-            await interaction.response.edit_message(embed=embed, view=self.view)
+
+        self.view.add_item(SegwayButton())
+        embed = discord.Embed(description=f'Total: {self.view.player_score} {TICKET}\n{outcome_response}. You earned {profit} {TICKET}' if profit > 0 else f'You lost {-profit} {TICKET}').set_image(url=SIGNAL)
+        await interaction.response.edit_message(embed=embed, view=self.view)
         
+
+class SegwayButton(discord.ui.Button):
+    """
+    A discord button that is sent between game situations
+    """
+
+    view: GameView
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.gray, 
+            label='Next'
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        self.view.clear_items()
+        if self.view.situations:
+            next_situation = self.view.situations.pop()
+
+            for option in next_situation.options:
+                self.view.add_item(GameButton(option))
+        
+            embed = discord.Embed(description=f'Total: {self.view.player_score} {TICKET}\n{next_situation.desciption}').set_image(url=SIGNAL)
+            await interaction.response.edit_message(embed=embed, view=self.view)
+
         else:
             if self.view.player_score > 0:
                 self.view.add_item(PayoutButton(f'{self.view.player_score} (Collect)'))
@@ -79,41 +107,17 @@ class GameButton(discord.ui.Button):
                 embed= discord.Embed(description='You are lucky I am not making you pay for my losses.').set_image(url=MR_K)
                 await interaction.response.edit_message(embed=embed, view=None)
                 self.view.stop()
-        
-
-class SegwayButton(discord.ui.Button):
-    """
-    A discord button that is sent between game situations
-
-    Parameters
-    -----------
-    next_situation: Situation
-        The next situation the survivor has to face during the event
-    """
-
-    view: GameView
-    def __init__(self, next_situation: Situation):
-        self.next_situation = next_situation
-
-        super().__init__(
-            style=discord.ButtonStyle.gray, 
-            label='Next'
-        )
-    
-    async def callback(self, interaction: discord.Interaction):
-        self.view.clear_items()
-
-        for option in self.next_situation.options:
-            self.view.add_item(GameButton(option))
-        
-        embed = discord.Embed(description=self.next_situation.desciption).set_image(url=SIGNAL)
-        await interaction.response.edit_message(embed=embed, view=self.view)
 
 
 class PayoutButton(discord.ui.Button):
     """
     A discord button that is sent at the end of the game when all situations are delt with. This is only sent if the survivor
     profited
+
+    Parameters
+    -----------
+    label: str
+        The text that appears on this button
     """
 
     view: GameView
@@ -127,13 +131,113 @@ class PayoutButton(discord.ui.Button):
     
     async def callback(self, interaction: discord.Interaction):
         embed = discord.Embed(description='Well done survivor. Come back tomorrow for another task.').set_image(url=MR_K)
-        query = f'INSERT INTO {TABLE_CURRENCY}(user_id, tickets) VALUES($1, $2) ON CONFLICT(user_id) DO UPDATE SET tickets = coalesce({TABLE_CURRENCY}.tickets, 0) + $2'
         
         async with self.view.bot.pool.acquire() as con:
-            await con.execute(query, self.view.player.id, self.view.player_score)
+            await self.view.player.update(con, tickets=self.view.player_score)
         
         await interaction.response.edit_message(embed=embed, view=None)
         self.view.stop()
+
+
+class DifficultySelect(discord.ui.Select):
+    """
+    A discord select menu that is sent at the start of the game. This allows the survivor to select the difficulty level of the game.
+    Higher the difficulty, better the prizes. The select is disabled if the player is not at least level 5
+
+    Parameters
+    -----------
+    placeholder: str
+        The text that appears on the select when no option is selected
+    disabled: bool
+        bool representing if the select is disabled or not
+    """
+
+    view: GameView
+    def __init__(self, *, placeholder: Optional[str], disabled: bool) -> None:
+        super().__init__(
+            placeholder=placeholder, 
+            disabled=disabled, 
+            options=[
+                discord.SelectOption(label='Easy', value='75'),
+                discord.SelectOption(label='Medium', value='45'),
+                discord.SelectOption(label='Hard', value='25')
+            ]
+            )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        self.disabled = True
+        self.view.difficulty = int(self.values[0])
+        await interaction.response.edit_message(view=self.view)
+
+
+class BoostSelect(discord.ui.Select):
+    """
+    A discord select menu that is sent at the start of the game. This allows the survivor to select a boost that is applied to the game.
+    The select is disabled if the player is not at least level 10
+
+    Parameters
+    -----------
+    placeholder: str
+        The text that appears on the select when no option is selected
+    disabled: bool
+        bool representing if the select is disabled or not
+    """
+
+    view: GameView
+    def __init__(self, *, placeholder: Optional[str], disabled: bool) -> None:
+        super().__init__(
+            placeholder=placeholder, 
+            disabled=disabled,
+            options=[
+                discord.SelectOption(label='No losses', description='Even if you lose a situation you will not recieve negative points.', value='1'),
+                discord.SelectOption(label='2x Rewards', description='Get double the rewards!.', value='2'),
+                discord.SelectOption(label='One extra situation', description='Instead of 3 situations you face 4!', value='3')
+            ]
+            )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        val = int(self.values[0])
+        self.disabled = True
+        if val == 1:
+            self.view.no_losses = True
+        elif val == 2:
+            self.view.double_rewards = True
+        elif val == 3:
+            self.view.no_of_situations += 1
+        await interaction.response.edit_message(view=self.view)
+
+
+class ChooseGameSelect(discord.ui.Select):
+    """
+    A discord select menu that is sent at the start of the game. This allows the survivor to select an event for the game.
+
+    Parameters
+    -----------
+    options: List[discord.SelectOption]
+        List of Select Options each representing an event
+    """
+    view: GameView
+    def __init__(self, *, options: List[discord.SelectOption]) -> None:
+        super().__init__(
+            placeholder='Select Task',
+            options=options, 
+            )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        event_id = int(self.values[0])
+        query = 'SELECT description, outcomes FROM events.situations WHERE game_id = $1 ORDER BY random() LIMIT $2'
+        self.view.clear_items()
+
+        async with self.view.bot.pool.acquire() as con:
+            rows: List[asyncpg.Record] = await con.fetch(query, event_id, self.view.no_of_situations)
+            self.view.situations = [Situation(description, json.loads(options)) for (description, options) in rows]
+
+        next_situation = self.view.situations.pop()
+        for option in next_situation.options:
+            self.view.add_item(GameButton(option))
+        
+        embed = discord.Embed(description=f'Total: {self.view.player_score} {TICKET}\n{next_situation.desciption}').set_image(url=SIGNAL)
+        await interaction.response.edit_message(embed=embed, view=self.view)
 
 
 class GameView(discord.ui.View):
@@ -142,8 +246,8 @@ class GameView(discord.ui.View):
 
     Parameters
     -----------
-    player: discord.Member
-        The survivor playing the game
+    player: LeaderboardPlayer
+        The user playing the game
     game_names: List[Tuple[str, int]]
         A list of (game_name, game_id) tuples
 
@@ -157,50 +261,43 @@ class GameView(discord.ui.View):
 
     bot: BunkerBot
     situations: List[Situation]
-    def __init__(self, player: discord.Member, game_names: List[Tuple[str, int]]):
+    def __init__(self, player: LeaderboardPlayer, game_names: List[Tuple[str, int]]):
         super().__init__()
         self.player = player
+        self.no_of_situations: int = 3
         self.player_score: int = 0
-        self.difficulty: int = 2
+        self.difficulty: int = 75
+        self.double_rewards: bool = False
+        self.no_losses: bool = False
 
-        self.choose_difficulty.options = [
-            discord.SelectOption(label='Easy', value='2', default=True),
-            discord.SelectOption(label='Medium', value='3'),
-            discord.SelectOption(label='Hard', value='4')
-        ]
+        if player.level < 5:
+            self.add_item(DifficultySelect(placeholder='Reach lvl 5 to unlock difficulties', disabled=True))
+        else:
+            self.add_item(DifficultySelect(placeholder='Select Difficulty', disabled=False))
 
-        self.choose_event.options = [discord.SelectOption(label=game_name, value=str(game_id)) for (game_name, game_id) in game_names]
+        if player.level < 10:
+            self.add_item(BoostSelect(placeholder='Reach lvl 10 to unlock boosts', disabled=True))
+        else:
+            self.add_item(BoostSelect(placeholder='Select Boost', disabled=False))
+
+        self.add_item(ChooseGameSelect(options=[discord.SelectOption(label=game_name, value=str(game_id)) for (game_name, game_id) in game_names]))
 
     @property
-    def determine_situation_successs(self) -> bool:
-        return True if randint(1, 100) % self.difficulty == 0 else False
+    def determine_situation_successs(self) -> Tuple[bool, int]:
+        outcome = True if randint(1, 100) <= self.difficulty else False
+        min_rewards, max_reward = AWARDS[self.difficulty]
+        prize = randint(min_rewards, max_reward) if outcome else -randint(min_rewards/2, max_reward/2)
 
-    @discord.ui.select(placeholder='Select Difficulty')
-    async def choose_difficulty(self, select: discord.ui.Select, interaction: discord.Interaction) -> None:
-        select.disabled = True
-        self.difficulty = int(select.values[0])
-        await interaction.response.edit_message(view=self)
+        if self.no_losses and prize < 0:
+            prize = 0
 
-    @discord.ui.select(placeholder='Select Task')
-    async def choose_event(self, select: discord.ui.Select, interaction: discord.Interaction) -> None:
-        event_id = int(select.values[0])
-        query = 'SELECT description, outcomes FROM events.situations WHERE game_id = $1 ORDER BY random() LIMIT 3'
-        self.clear_items()
+        if self.double_rewards and prize > 0:
+            prize *= 2
 
-        async with self.bot.pool.acquire() as con:
-            rows: List[asyncpg.Record] = await con.fetch(query, event_id)
-            self.situations = [Situation(description, json.loads(options)) for (description, options) in rows]
-
-        next_situation = self.situations.pop()
-        for option in next_situation.options:
-            self.add_item(GameButton(option))
-        
-        embed = discord.Embed(description=next_situation.desciption).set_image(url=SIGNAL)
-        await interaction.response.edit_message(embed=embed, view=self)
+        return outcome, prize
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return self.player.id == interaction.user.id # type: ignore
-
+        return self.player.user.id == interaction.user.id # type: ignore
 
 
 class game(commands.Cog):
@@ -218,10 +315,15 @@ class game(commands.Cog):
             self.games = [(game_name, game_id) for (game_id, game_name) in rows]
     
 
-    @commands.command() # TODO name?
-    async def test(self, ctx: BBContext) -> None:
+    @commands.command(aliases=['tasks']) # TODO name?
+    async def task(self, ctx: BBContext):
+        player = await LeaderboardPlayer.fetch(await ctx.get_connection(), ctx.author)
+
+        if player.level < 1:
+            return await ctx.send('You must be at least level 1 to play the game :(')
+
         embed = discord.Embed(description="Hey survivor!\nCan you do me favor? Don't worry you succeed and you get payed well").set_image(url=MR_K)
-        game = GameView(ctx.author, choices(self.games, k=1))
+        game = GameView(player, choices(self.games, k=1)) # TODO add more events and change k to 3
         game.bot = self.bot
         await ctx.send(embed=embed, view=game)
 

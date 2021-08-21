@@ -1,10 +1,12 @@
+import re
 import asyncpg
 import discord
 import logging
 
 from context import BBContext
 from discord.ext import commands
-from typing import Callable, List, Set
+from typing import Callable, Dict, List, Optional, Set, Union
+from utils.constants import TABLE_LEADERBOARD
 
 
 async def release_connection(ctx: BBContext) -> None:
@@ -45,6 +47,7 @@ class BunkerBot(commands.Bot):
         self.tags: Set[str] = set()
         self.times_code_is_asked: int = 0
         self.on_time = discord.utils.utcnow()
+        self.xp_cache: Dict[int, float] = {}
 
     async def start(self, token: str, *, reconnect: bool = True) -> None:
         async with self.pool.acquire() as con:
@@ -60,6 +63,7 @@ class BunkerBot(commands.Bot):
 
     async def close(self):
         try:
+            await self.update_xp()
             await self.pool.close()
         except:
             pass
@@ -75,3 +79,24 @@ class BunkerBot(commands.Bot):
             return
         return await super().on_message(message)
 
+    async def update_xp(self) -> None:
+        async with self.pool.acquire() as con:
+            _data = self.xp_cache.copy()
+            self.xp_cache = {}
+            query = f'INSERT INTO {TABLE_LEADERBOARD}(user_id, xp) \
+                      VALUES($1, $2) \
+                      ON CONFLICT(user_id) \
+                      DO UPDATE SET xp = {TABLE_LEADERBOARD}.xp + $2'
+            await con.executemany(query, _data.items())
+
+    async def getch_member(self, guild: discord.Guild, user_id: int) -> Union[discord.Member, int]:
+        member = guild.get_member(user_id)
+        if member:
+            return member
+
+        try:
+            member = await guild.fetch_member(user_id)
+        except discord.HTTPException:
+            return user_id
+        else:
+            return member

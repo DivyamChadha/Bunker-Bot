@@ -5,3 +5,4 @@ __pycache__/
 utils/constants.py
 codes
 confidential.ini
+test.py
