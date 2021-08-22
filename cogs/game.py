@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import asyncpg
 import discord
 import json
@@ -7,13 +8,15 @@ import json
 from bot import BunkerBot
 from context import BBContext
 from utils.constants import MR_K, SIGNAL, TICKET
-from discord.ext import commands
+from datetime import datetime, timedelta
+from discord.ext import commands, tasks
 from random import randint, choices
 from typing import List, Optional, Tuple, Dict
 from utils.levels import LeaderboardPlayer
 
 
 TABLE_CURRENCY = 'events.currency'
+TABLE_GAME_TTL = 'events.game_ttl'
 AWARDS = { # difficulty_level: (min reward, max reward)
     75: (10, 20), # easy
     45: (30, 50), # medium
@@ -303,9 +306,11 @@ class GameView(discord.ui.View):
 class game(commands.Cog):
 
     games: List[Tuple[str, int]]
+    game_tasks: Dict[str, asyncio.Task] = {}
     def __init__(self, bot: BunkerBot) -> None:
         self.bot = bot
         bot.loop.create_task(self.get_games())
+        self.game_command_ttl.start()
 
     async def get_games(self) -> None:
         query = 'SELECT game_id, name FROM events.games ORDER BY random()'
@@ -313,10 +318,41 @@ class game(commands.Cog):
         async with self.bot.pool.acquire() as con:
             rows = await con.fetch(query)
             self.games = [(game_name, game_id) for (game_id, game_name) in rows]
-    
 
+    def cog_unload(self):
+        for task in self.game_tasks.values():
+            task.cancel()
+    
+    @tasks.loop(hours=1)
+    async def game_command_ttl(self):
+        query = f'SELECT user_id, time FROM {TABLE_GAME_TTL} WHERE time < $1'
+
+        async with self.bot.pool.acquire() as con:
+            rows = await con.fetch(query, discord.utils.utcnow() + timedelta(hours=1))
+        
+        for row in rows:
+            task = self.bot.loop.create_task(self.remove_cooldown_from_game(row['user_id'], row['time']), name=str(row['user_id']))
+            self.game_tasks[task.get_name()] = task
+
+    async def remove_cooldown_from_game(self, user_id: int, time: datetime) -> None:
+        await discord.utils.sleep_until(time)
+        query = f'DELETE FROM {TABLE_GAME_TTL} WHERE user_id = $1'
+        async with self.bot.pool.acquire() as con:
+            await con.execute(query, user_id)
+        del self.game_tasks[str(user_id)]
+    
     @commands.command(aliases=['tasks']) # TODO name?
     async def task(self, ctx: BBContext):
+        con = await ctx.get_connection()
+        query = f'SELECT time FROM {TABLE_GAME_TTL} WHERE user_id = $1'
+
+        if time := await con.fetchval(query, ctx.author.id):
+            embed = discord.Embed(description=f'Back so soon? I do not have any more tasks for you right now. Check again {discord.utils.format_dt(time, "R")}')
+            embed.set_image(url=MR_K)
+            return await ctx.reply(embed=embed)
+
+        query = f'INSERT INTO {TABLE_GAME_TTL}(user_id, time) VALUES($1, $2)'
+        await con.execute(query, ctx.author.id, discord.utils.utcnow() + timedelta(days=1))
         player = await LeaderboardPlayer.fetch(await ctx.get_connection(), ctx.author)
 
         if player.level < 1:
