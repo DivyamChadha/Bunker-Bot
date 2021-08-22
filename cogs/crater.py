@@ -47,7 +47,7 @@ class crater(commands.Cog):
     async def clan(self, ctx: BBContext):
         pass
 
-    @clan.command(aliases=['p'])
+    @clan.command()
     async def profile(self, ctx: BBContext):
 
         con = await ctx.get_connection()
@@ -71,7 +71,7 @@ class crater(commands.Cog):
         await ctx.send(embed=embed)
 
 
-    @clan.command(name='register-clan', aliases=['rc', 'registerclan'])
+    @clan.command(name='register-clan', aliases=['registerclan'])
     async def register_clan(self, ctx: BBContext, name: str, leader: Optional[discord.User]):
 
         leader_id = ctx.author.id if leader is None else leader.id
@@ -89,7 +89,7 @@ class crater(commands.Cog):
             await ctx.send('You have already registered a clan!')
 
 
-    @clan.command(name='set-description',aliases=['sd', 'setdescription'])
+    @clan.command(name='set-description',aliases=['setdescription'])
     async def set_description(self, ctx: BBContext, *, description: str):
         con = await ctx.get_connection()
         query = 'UPDATE clans.clan SET description = $1 WHERE leader_id = $2'
@@ -98,7 +98,7 @@ class crater(commands.Cog):
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
 
-    @clan.command(name='set-banner', aliases=['sb', 'setbanner'])
+    @clan.command(name='set-banner', aliases=['setbanner'])
     async def set_banner(self, ctx: BBContext, url: str):
         con = await ctx.get_connection()
         query = 'UPDATE clans.clan SET banner_url = $1 WHERE leader_id = $2'
@@ -106,7 +106,7 @@ class crater(commands.Cog):
         result = await con.execute(query, url, ctx.author.id)
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
-    @clan.command(name='add-member', aliases=['am', 'addmember'])
+    @clan.command(name='add-member', aliases=['addmember'])
     async def add_member(self, ctx: BBContext, member: discord.Member, *, role: Optional[str]):
 
         role = 'Member' if role is None else role
@@ -131,7 +131,7 @@ class crater(commands.Cog):
         except asyncpg.UniqueViolationError:
             await ctx.send('Member is already in a clan!')
 
-    @clan.command(name='remove-member', aliases=['rm', 'removemmember'])
+    @clan.command(name='remove-member', aliases=['removemmember'])
     async def remove_member(self, ctx: BBContext, member: discord.Member):
         con = await ctx.get_connection()
         query = '''DELETE FROM clans.clan_members WHERE 
@@ -149,7 +149,7 @@ class crater(commands.Cog):
         result = await con.execute(query, language, ctx.author.id)
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
-    @clan.command(name='set-tag', aliases=['st', 'settag'])
+    @clan.command(name='set-tag', aliases=['settag'])
     async def set_clan_tag(self, ctx: BBContext, tag: str):
         tag = tag.upper()
 
@@ -171,7 +171,7 @@ class crater(commands.Cog):
         await self.check_error(result, 'You cannot leave if you are not in a clan or are a clan leader.', ctx)
 
 
-    @clan.command(name='swap-leader', aliases=['sleader', 'swapleader', 'swapl', 'sle'])
+    @clan.command(name='swap-leader', aliases=['swapleader'])
     async def swap_leader(self, ctx:BBContext, old_leader: discord.Member, new_leader: discord.Member):
         con = await ctx.get_connection()
 
