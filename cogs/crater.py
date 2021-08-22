@@ -149,7 +149,7 @@ class crater(commands.Cog):
         result = await con.execute(query, language, ctx.author.id)
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
-    @clan.command(name='set-tag', aliases=['st, settag'])
+    @clan.command(name='set-tag', aliases=['st', 'settag'])
     async def set_clan_tag(self, ctx: BBContext, tag: str):
         tag = tag.upper()
 
@@ -159,7 +159,7 @@ class crater(commands.Cog):
         result = await con.execute(query, tag, ctx.author.id)
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
-    @clan.command(aliases=['l, leaveclan'])
+    @clan.command(aliases=['l', 'leaveclan'])
     async def leave(self, ctx: BBContext):
         con = await ctx.get_connection()
 
