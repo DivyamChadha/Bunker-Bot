@@ -47,30 +47,6 @@ class crater(commands.Cog):
     async def clan(self, ctx: BBContext):
         pass
 
-    @clan.command()
-    async def profile(self, ctx: BBContext):
-
-        con = await ctx.get_connection()
-        query = '''SELECT clan_name, description, banner_url, clan_role, clan_language, clan_tag FROM clans.clan_members  
-                   INNER JOIN clans.clan ON clan.clan_id = clan_members.clan_id WHERE member_id = $1'''
-        args = [query, ctx.author.id]
-
-        data: List[asyncpg.Record] = await con.fetch(*args)
-
-        if len(data) <= 0:
-            embed = discord.Embed(title= 'No Clan')
-
-        else:
-            embed = discord.Embed(title=f'Clan Profile', description=f'**{data[0][0]} ({data[0][5]})**\n {data[0][1]}')
-            embed.set_image(url=data[0][2])
-            embed.add_field(name='Member Name', value=ctx.author.name, inline=True)
-            embed.add_field(name='Clan Position', value=data[0][3], inline=True)
-            embed.add_field(name='Clan Language', value=data[0][4], inline=True)
-
-
-        await ctx.send(embed=embed)
-
-
     @clan.command(name='register-clan', aliases=['registerclan'])
     async def register_clan(self, ctx: BBContext, name: str, leader: Optional[discord.User]):
 

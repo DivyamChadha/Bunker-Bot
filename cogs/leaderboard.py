@@ -79,16 +79,9 @@ class leaderboard(commands.Cog):
         """
         await self.bot.update_xp()
 
-    @commands.group(invoke_without_command=True, aliases=['xp', 'tickets', 'coins'])
-    @commands.cooldown(1, 60.0, commands.BucketType.member)
+    @commands.group()
     async def level(self, ctx: BBContext):
-        con = await ctx.get_connection()
-        player = await LeaderboardPlayer.fetch(con, ctx.author)
-        embed = discord.Embed(
-            title=f'{ctx.author.name}#{ctx.author.discriminator}', 
-            description=f'Level: **{player.level}**\nXP: **{player.xp}**\nCoins: **{player.coins}**  {COINS}\nTickets: **{player.tickets}** {TICKET}')
-
-        await ctx.send(embed=embed)
+        pass
 
     @level.group(invoke_without_subcommand=True)
     @commands.has_guild_permissions(administrator=True)
