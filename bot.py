@@ -100,3 +100,15 @@ class BunkerBot(commands.Bot):
             return user_id
         else:
             return member
+
+    async def getch_user(self, user_id: int) -> Optional[discord.User]:
+        user = self.get_user(user_id)
+        if user:
+            return user
+        
+        try:
+            user = await self.fetch_user(user_id)
+        except discord.HTTPException:
+            return
+        else:
+            return user
