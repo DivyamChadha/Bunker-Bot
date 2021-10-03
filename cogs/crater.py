@@ -47,10 +47,8 @@ class crater(commands.Cog):
     async def clan(self, ctx: BBContext):
         pass
 
-    @clan.command(name='register-clan', aliases=['registerclan'])
-    async def register_clan(self, ctx: BBContext, name: str, leader: Optional[discord.User]):
-
-        leader_id = ctx.author.id if leader is None else leader.id
+    @clan.command(name='register')
+    async def register_clan(self, ctx: BBContext, name: str, leader: discord.User):
 
         # insert the new clan and get the clan_id to also insert the leader as a clan_member
         con = await ctx.get_connection()
@@ -59,7 +57,7 @@ class crater(commands.Cog):
                    VALUES ($2, (SELECT clan_id FROM new_clan), $3)'''
 
         try:
-            await con.execute(query, name, leader_id, 'Leader')
+            await con.execute(query, name, leader.id, 'Leader')
             await ctx.tick(True)
         except asyncpg.exceptions.UniqueViolationError:
             await ctx.send('You have already registered a clan!')
