@@ -60,11 +60,16 @@ class ProfileView(discord.ui.View):
         self.clan.disabled = True
 
         if self.clan_data:
-            embed = discord.Embed(title=f'{self.user}\'s Clan Profile', description=f'**{self.clan_data[0]} ({self.clan_data[5]})**\n {self.clan_data[1]}')
+            clan_tag = f' ({self.clan_data[5]})' if self.clan_data[5] else ''
+            embed = discord.Embed(title=f'{self.user}\'s Clan Profile', description = self.clan_data[0] + clan_tag)
+            
             embed.set_image(url=self.clan_data[2])
-            embed.add_field(name='Member Name', value=self.user.name, inline=True)
+
+            if self.clan_data[1]:
+                embed.description += f'\n{self.clan_data[1]}'
+
             embed.add_field(name='Clan Position', value=self.clan_data[3], inline=True)
-            embed.add_field(name='Clan Language', value=self.clan_data[4], inline=True)
+            embed.add_field(name='Clan Language', value=self.clan_data[4] or 'Not Set', inline=True)
         
         else:
             embed = discord.Embed(title=f'{self.user}\'s Clan Profile', description='Not found')
