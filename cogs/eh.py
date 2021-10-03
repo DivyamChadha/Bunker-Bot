@@ -27,7 +27,10 @@ class eh(commands.Cog):
 
         await ctx.release_connection()
 
-        if ctx.command.has_error_handler() or ctx.cog.has_error_handler(): # type: ignore
+        if ctx.command and ctx.command.has_error_handler:
+            return
+
+        if ctx.cog and ctx.cog.has_error_handler():
             return
 
         ignored = (commands.CommandNotFound, )
