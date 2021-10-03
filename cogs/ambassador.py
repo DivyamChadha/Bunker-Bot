@@ -17,7 +17,7 @@ class Flare:
     __slots__ = ('user', 'channel', 'reason', 'link', 'urgent', 'message')
 
     message: discord.Message
-    def __init__(self, user: discord.Member, channel: discord.TextChannel, reason: str, link: str, *, urgent: bool = False) -> None:
+    def __init__(self, user: discord.Member, channel: discord.abc.MessageableChannel, reason: str, link: str, *, urgent: bool = False) -> None:
         self.user = user
         self.channel = channel
         self.reason = reason
@@ -26,10 +26,11 @@ class Flare:
 
     @property
     def staff(self) -> discord.Embed:
+        resolve_mention = self.channel.mention if isinstance(self.channel, (discord.TextChannel, discord.Thread)) else self.channel
         if self.urgent:
-            description = f'Hi Staff! {EMOJI_LOUDSPEAKER*3}\n{self.user.mention} needs URGENT help in {self.channel.mention} with: __**{self.reason}**__'
+            description = f'Hi Staff! {EMOJI_LOUDSPEAKER*3}\n{self.user.mention} needs URGENT help in {resolve_mention} with: __**{self.reason}**__'
         else:
-            description = f'Hi Staff! {EMOJI_LOUDSPEAKER}\n{self.user.mention} needs help in {self.channel.mention} with: __**{self.reason}**__'
+            description = f'Hi Staff! {EMOJI_LOUDSPEAKER}\n{self.user.mention} needs help in {resolve_mention} with: __**{self.reason}**__'
 
         embed = discord.Embed(description=description)
         embed.add_field(name='Quick Portal', value=f'[Click Here]({self.link})')
@@ -37,10 +38,11 @@ class Flare:
 
     @property
     def ambass(self) -> discord.Embed:
+        resolve_mention = self.channel.mention if isinstance(self.channel, (discord.TextChannel, discord.Thread)) else self.channel
         if self.urgent:
-            description = f'Hi everyone! {EMOJI_LOUDSPEAKER*3}\n{self.user.mention} has requested URGENT staff help in {self.channel.mention} with: __**{self.reason}**__'
+            description = f'Hi everyone! {EMOJI_LOUDSPEAKER*3}\n{self.user.mention} has requested URGENT staff help in {resolve_mention} with: __**{self.reason}**__'
         else:
-            description = f'Hi everyone! {EMOJI_LOUDSPEAKER}\n{self.user.mention} has requested staff help in {self.channel.mention} with: __**{self.reason}**__'
+            description = f'Hi everyone! {EMOJI_LOUDSPEAKER}\n{self.user.mention} has requested staff help in {resolve_mention} with: __**{self.reason}**__'
 
         embed = discord.Embed(description=description)
         embed.add_field(name='Quick Portal', value=f'[Click Here]({self.link})')
@@ -90,12 +92,12 @@ class ambassador(commands.Cog):
         staff = self.bot.get_channel(staff_lounge)
         flares: List[Flare] = []
 
-        emoji = choice(ctx.guild.emojis)
+        emoji = choice(ctx.guild.emojis) # type: ignore (Direct messages intent is not being used so guild will not be none)
         emoji_message = await ctx.send(str(emoji))
 
         for channel_id in FLARE_INFO_CHANNELS:
             channel = self.bot.get_channel(channel_id)
-            flare = Flare(ctx.author, ctx.channel, reason, emoji_message.jump_url)
+            flare = Flare(ctx.author, ctx.channel, reason, emoji_message.jump_url) # type: ignore (Direct messages intent is not being used so author will be a member)
             flare.message = await channel.send(embed=flare.ambass) # type: ignore
             flares.append(flare)
 
@@ -106,12 +108,12 @@ class ambassador(commands.Cog):
         staff = self.bot.get_channel(staff_lounge)
         flares: List[Flare] = []
 
-        emoji = choice(ctx.guild.emojis)
+        emoji = choice(ctx.guild.emojis) # type: ignore (Direct messages intent is not being used so guild will not be none)
         emoji_message = await ctx.send(str(emoji))
 
         for channel_id in FLARE_INFO_CHANNELS:
             channel = self.bot.get_channel(channel_id)
-            flare = Flare(ctx.author, ctx.channel, reason, emoji_message.jump_url, urgent=True)
+            flare = Flare(ctx.author, ctx.channel, reason, emoji_message.jump_url, urgent=True) # type: ignore (Direct messages intent is not being used so author will be a member)
             flare.message = await channel.send(embed=flare.ambass) # type: ignore
             flares.append(flare)
 
@@ -120,14 +122,14 @@ class ambassador(commands.Cog):
     @commands.command(aliases=['whois'])
     async def userinfo(self, ctx: BBContext, *, person: Optional[discord.Member] = None) -> None:
         if not person:
-            person = ctx.author
+            person = ctx.author # type: ignore (Direct messages intent is not being used so author will not be a member)
 
         if not person:
             return
 
         roles = [role.mention for role in person.roles]
         permissions = [perm[0] if perm[1] else '' for perm in person.guild_permissions]
-        join_position = sorted(ctx.guild.members, key=lambda m: m.joined_at).index(person) + 1
+        join_position = sorted(ctx.guild.members, key=lambda m: m.joined_at).index(person) + 1 # type: ignore (Direct messages intent is not being used so guild will not be none)
         created_on = person.created_at.strftime('%m/%d/%Y, %H:%M:%S')
         joined_on = person.joined_at.strftime('%m/%d/%Y, %H:%M:%S') # type: ignore
 
@@ -142,7 +144,7 @@ class ambassador(commands.Cog):
     @commands.command(aliases=['members'])
     async def inrole(self, ctx: BBContext, *, role: discord.Role) -> None:
         predicate: Callable[[discord.Member], bool] = lambda member: role in member.roles
-        members: List[Optional[discord.Member]] = [member for member in ctx.guild.members if predicate(member)]
+        members: List[Optional[discord.Member]] = [member for member in ctx.guild.members if predicate(member)] # type: ignore (Direct messages intent is not being used so guild will not be none)
 
         if members:
             view = InRolePagination(ctx.author, members) # type: ignore

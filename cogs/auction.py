@@ -107,7 +107,7 @@ class auction(commands.Cog):
         rows = await con.fetch(query, discord.utils.utcnow())
 
         if rows:    
-            view = AuctionPages(ctx.author.id, rows, bot=self.bot, guild=ctx.guild)
+            view = AuctionPages(ctx.author.id, rows, bot=self.bot, guild=ctx.guild) # type: ignore (Direct messages intent is not being used so guild will not be none)
             await view.start(ctx.channel)
         else:
             await ctx.send('No goodies available right now.')
@@ -172,7 +172,7 @@ class auction(commands.Cog):
         item = AuctionItem.from_dict(dict(row))
 
         if item.current_holder:
-            user = await self.bot.getch_member(ctx.guild, item.current_holder)
+            user = await self.bot.getch_member(ctx.guild, item.current_holder) # type: ignore (Direct messages intent is not being used so guild will not be none)
             current_holder = user.name if isinstance(user, discord.Member) else user
         else:
             current_holder = 'No bet yet'   
@@ -195,7 +195,7 @@ class auction(commands.Cog):
 
         if flags.time:
             columns.append('active_till')
-            args.append(discord.utils.utcnow()  + timedelta(seconds=flags.time)) # type: ignore
+            args.append(discord.utils.utcnow()  + timedelta(seconds=flags.time)) # type: ignore (linter doesnt understand TimeConverter)
 
         con = await ctx.get_connection()
         cols = ', '.join(f'{col}=${i+2}' for i, col in enumerate(columns))

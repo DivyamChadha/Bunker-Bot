@@ -274,7 +274,7 @@ class bunkercode(commands.Cog):
 
         con = await ctx.get_connection()
         data: List[asyncpg.Record] = await con.fetch(*args)
-        view = ArtsLeaderboardPagination(data, ctx.author)
+        view = ArtsLeaderboardPagination(data, ctx.author) # type: ignore (Direct messages intent is not being used so author can only be a member)
         await view.start(ctx.channel)
 
     @commands.command()
@@ -289,7 +289,7 @@ class bunkercode(commands.Cog):
         con = await ctx.get_connection()
         data: List[asyncpg.Record] = await con.fetch(*args)
 
-        view = ArtsPagination(data, ctx.author)
+        view = ArtsPagination(data, ctx.author) # type: ignore (Direct messages intent is not being used so author can only be a member)
         await view.start(ctx.channel)
 
 

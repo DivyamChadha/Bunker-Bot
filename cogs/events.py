@@ -27,46 +27,52 @@ class events(commands.Cog):
 
     @commands.command()
     async def ea(self, ctx: BBContext, *, words: Optional[str] ='None'):
-        eventslounge = ctx.guild.get_channel(events_lounge)
+        eventslounge = ctx.guild.get_channel(events_lounge) # type: ignore (Direct messages intent is not being used so guild will not be none)
 
         if ctx.channel == eventslounge:
-            channel: discord.TextChannel = ctx.guild.get_channel(events_answers)
+            channel: discord.TextChannel = ctx.guild.get_channel(events_answers) # type: ignore (Direct messages intent is not being used so guild will not be none)
             await channel.send(f'``` ```\n**Event Submission**\nUser: {ctx.author.mention} ({ctx.author.display_name})'
                                f' \nUser ID: {ctx.author.id} \nSubmisson:\n{words}', allowed_mentions=discord.AllowedMentions.none())
             await ctx.message.delete() # type: ignore
         else:
-            await ctx.send(f'This command is only usable in {eventslounge.mention}', allowed_mentions=discord.AllowedMentions.none())
+            await ctx.send(f'This command is only usable in {eventslounge.mention}', allowed_mentions=discord.AllowedMentions.none()) # type: ignore (We can guarantee here that events lounge will not be none)
 
     @commands.command()
     async def eventspart(self, ctx: BBContext, members: commands.Greedy[discord.Member]):
-        participants_role = ctx.guild.get_role(events_participants)
-        log_channel = ctx.guild.get_channel(server_logs)
+        log_channel = ctx.guild.get_channel(server_logs) # type: ignore (Direct messages intent is not being used so guild will not be none)
 
         text = ''
         for member in members:
-            await member.add_roles(participants_role)
+            await member.add_roles(discord.Object(events_participants))
             text += f'\n{member.mention} ({member.id})'
 
         embed = discord.Embed(title = 'Events Participants role added to:', description=text)
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
 
-        await log_channel.send(embed=embed)
+        if ctx.author.avatar:
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
+        else:
+            embed.set_author(name=ctx.author.name)
+
+        await log_channel.send(embed=embed) # type: ignore (We can guarantee here that channel exists and is TextChannel)
         await ctx.tick()
 
     @commands.command()
     async def eventsunpart(self, ctx: BBContext, members: commands.Greedy[discord.Member]):
-        participants_role = ctx.guild.get_role(events_participants)
-        log_channel = ctx.guild.get_channel(server_logs)
+        log_channel = ctx.guild.get_channel(server_logs) # type: ignore (Direct messages intent is not being used so guild will not be none)
 
         text = ''
         for member in members:
-            await member.remove_roles(participants_role)
+            await member.remove_roles(discord.Object(events_participants))
             text += f'\n{member.mention} ({member.id})'
 
         embed = discord.Embed(title = 'Events Participants role removed from::', description=text)
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
 
-        await log_channel.send(embed=embed)
+        if ctx.author.avatar:
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar.url)
+        else:
+            embed.set_author(name=ctx.author.name)
+
+        await log_channel.send(embed=embed) # type: ignore (We can guarantee here that channel exists and is TextChannel)
         await ctx.tick()
 
     @commands.Cog.listener(name='on_reaction_add')

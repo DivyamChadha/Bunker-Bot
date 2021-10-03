@@ -85,7 +85,7 @@ class crater(commands.Cog):
         try:
             await con.execute(query, name, leader_id, 'Leader')
             await ctx.tick(True)
-        except asyncpg.UniqueViolationError:
+        except asyncpg.exceptions.UniqueViolationError:
             await ctx.send('You have already registered a clan!')
 
 
@@ -125,10 +125,10 @@ class crater(commands.Cog):
             await con.execute(query, member.id, ctx.author.id, role)
             await ctx.tick(True)
 
-        except asyncpg.NotNullViolationError:
+        except asyncpg.exceptions.NotNullViolationError:
             await ctx.send('You are not a leader of a clan!')
 
-        except asyncpg.UniqueViolationError:
+        except asyncpg.exceptions.UniqueViolationError:
             await ctx.send('Member is already in a clan!')
 
     @clan.command(name='remove-member', aliases=['removemmember'])
