@@ -81,6 +81,7 @@ class profile(commands.Cog):
         self.bot = bot
 
     @commands.command(name='profile')
+    @commands.cooldown(1, 60.0, commands.BucketType.member)
     async def _profile(self, ctx: BBContext):
         con = await ctx.get_connection()
 
