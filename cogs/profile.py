@@ -88,7 +88,7 @@ class profile(commands.Cog):
         # Clan Data
         query = '''SELECT clan_name, description, banner_url, clan_role, clan_language, clan_tag FROM clans.clan_members  
                    INNER JOIN clans.clan ON clan.clan_id = clan_members.clan_id WHERE member_id = $1'''
-        clan_data: Optional[asyncpg.Record] = await con.fetch(query, ctx.author.id)
+        clan_data: Optional[asyncpg.Record] = await con.fetchrow(query, ctx.author.id)
 
         # Events Data
         player = await LeaderboardPlayer.fetch(con, ctx.author)
