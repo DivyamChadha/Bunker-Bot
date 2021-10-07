@@ -188,7 +188,7 @@ class TagEmbedFlags(commands.FlagConverter, delimiter=' ', prefix='-'):
     """
     Flag converter used in update embed command
     """
-    tagid: int
+    tagid: int = commands.flag(aliases=['tid'])
     title: str = commands.flag(aliases=['t'], default=None)
     description: str = commands.flag(aliases=['d'], default=None)
     color: discord.Color = commands.flag(aliases=['c'], default=None)
@@ -273,6 +273,10 @@ class tags(commands.Cog):
 
     @commands.group(invoke_without_command=True, aliases=['tags', 't'])
     async def tag(self, ctx: BBContext, *, name: str):
+        """
+        A command to display a tag.
+        """
+        
         if name not in self.bot.tags:
             matches = difflib.get_close_matches(name, self.bot.tags, n=5)
 
@@ -310,6 +314,13 @@ class tags(commands.Cog):
 
     @tag.group(invoke_without_command=True)
     async def create(self, ctx: BBContext, name: str, *, content: str):
+        """
+        A command to create a tag. While creating a tag it is required to provide content, however 
+        this content can later be removed.
+
+        Note: A tag needs either content or an embed to be a valid tag.
+        """
+        
         con = await ctx.get_connection()
         query = f'WITH content AS (INSERT INTO {TABLE_CONTENT}(content) VALUES($2) RETURNING id ) \
                   INSERT INTO {TABLE_NAMES}(name, id) SELECT $1, id FROM content RETURNING id'
@@ -323,6 +334,16 @@ class tags(commands.Cog):
 
     @create.command(name='button')
     async def create_button(self, ctx: BBContext, *, flags: TagButtonFlags):
+        """
+        A command to create a button. This button then can be attached to a tag using add-component command.
+
+        The available flags are:
+            -[tagid|tid]
+            -[label|l]
+            -[emoji|e]
+            -[url|u]
+        """
+        
         if not (bool(flags.label) or bool(flags.emoji)):
             return await ctx.send('You must provided atleast one of the following: `-label`, `-emoji`')
 
@@ -350,6 +371,16 @@ class tags(commands.Cog):
 
     @create.command(name='selectoption', aliases=['select-option'])
     async def create_select(self, ctx: BBContext, *, flags: TagSelectOptionFlags):
+        """
+        A command to create a select component. This select then can be attached to a tag using add-component command.
+
+        The available flags are:
+            -[tagid|tid]
+            -[label|l]
+            -[emoji|e]
+            -[description|d]
+        """
+        
         query = f'SELECT EXISTS (SELECT FROM {TABLE_CONTENT} WHERE id = $1)'
         con = await ctx.get_connection()
 
@@ -371,10 +402,17 @@ class tags(commands.Cog):
 
     @tag.group()
     async def update(self, ctx: BBContext) -> None:
+        """
+        The base command for commands related to updating a tag.
+        """
         pass
 
     @update.command(name='content')
     async def update_content(self, ctx: BBContext, tag_id: int, *, content: str):
+        """
+        A command to update the content of a tag.
+        """
+        
         con = await ctx.get_connection()
         query = f'UPDATE {TABLE_CONTENT} SET content = $2 WHERE id = $1'
         val = await con.execute(query, tag_id, content)
@@ -385,7 +423,19 @@ class tags(commands.Cog):
             await ctx.send(f'Tag with ID: **{tag_id}** does not exist.')
 
     @update.command(name='embed')
-    async def update_embed(self, ctx: BBContext, *, flags: TagEmbedFlags):      
+    async def update_embed(self, ctx: BBContext, *, flags: TagEmbedFlags):   
+        """
+        A command to update the embed in a tag. If the tag does not have the tag prior to this then it is added.
+
+        The available flags are:
+            -[tagid|tid]
+            -[title|t] (optional)
+            -[description|d] (optional)
+            -[color|c] (optional)
+            -[footer|f] (optional)
+            -[image|i] (optional)
+        """
+           
         if not (bool(flags.title) or bool(flags.footer) or bool(flags.description) or bool(flags.image) or bool(flags.color)):
             return await ctx.send('You must fill atleast one field: `-title`, `-description`, `-footer`, `-image`, `-color`')
 
@@ -414,6 +464,17 @@ class tags(commands.Cog):
 
     @update.command(name='button')
     async def update_button(self, ctx: BBContext, *, flags: TagButtonFlagsUpdate):
+        """
+        A command to update a button.
+
+        The available flags are:
+            -[tagid|tid] (optional)
+            -[label|l] (optional)
+            -[emoji|e] (optional)
+            -[url|u] (optional)
+            -[componentid|cid]
+        """
+        
         query = f'SELECT EXISTS (SELECT FROM {TABLE_COMPONENTS} WHERE id = $1)'
         con = await ctx.get_connection()
 
@@ -440,6 +501,17 @@ class tags(commands.Cog):
 
     @update.command(name='selectoption', aliases=['select-option'])
     async def update_selectoption(self, ctx: BBContext, *, flags: TagSelectOptionFlagsUpdate):
+        """
+        A command to update a select component.
+
+        The available flags are:
+            -[tagid|tid] (optional)
+            -[label|l] (optional)
+            -[emoji|e] (optional)
+            -[description|d] (optional)
+            -[componentid|cid]
+        """
+        
         query = f'SELECT EXISTS (SELECT FROM {TABLE_COMPONENTS} WHERE id = $1)'
         con = await ctx.get_connection()
 
@@ -466,6 +538,10 @@ class tags(commands.Cog):
 
     @tag.command(name='add-component', aliases=['addcomponent', 'ac'])
     async def add_component(self, ctx: BBContext, tag_id: int, component_id: int):
+        """
+        A command to add a component to a tag. Components are buttons and selects.
+        """
+        
         con = await ctx.get_connection()
 
         async with con.transaction():
@@ -480,6 +556,10 @@ class tags(commands.Cog):
     
     @tag.command(name='remove-component', aliases=['removecomponent', 'rc'])
     async def remove_component(self, ctx: BBContext, tag_id: int, component_id: int):
+        """
+        A command to remove a component from a tag. Components are buttons and selects.
+        """
+        
         con = await ctx.get_connection()
         query = "UPDATE tags.content SET component_ids = array_remove(COALESCE(component_ids, '{}'::int[]), $1) WHERE id = $2"
 
@@ -491,6 +571,10 @@ class tags(commands.Cog):
 
     @tag.group(invoke_without_command=True)
     async def delete(self, ctx: BBContext, tag_id: int): # must remove any component pointing to it as well
+        """
+        A command to delete a tag. This also acts as a base command for other tag delete sub commands.
+        """
+        
         confirm = Confirm(ctx.author.id)
         await ctx.send(f'Are you sure you want to delete Tag with ID: **{tag_id}**.', view=confirm)
         await confirm.wait()
@@ -517,6 +601,10 @@ class tags(commands.Cog):
 
     @delete.command(name='content')
     async def delete_content(self, ctx: BBContext, tag_id: int):
+        """
+        A command to delete the content part of a tag.
+        """
+        
         confirm = Confirm(ctx.author.id)
         await ctx.send(f'Are you sure you want to remove text content in Tag with ID: **{tag_id}**.\nNote: The tag will not be deleted and the content can be added again using `b!tag update content` command.\n**Warning: The tag needs at least content or embed to work properly.**', view=confirm)
         await confirm.wait()
@@ -534,6 +622,10 @@ class tags(commands.Cog):
 
     @delete.command(name='embed')
     async def delete_embed(self, ctx: BBContext, tag_id: int):
+        """
+        A command to delete the embed part of a tag.
+        """
+        
         confirm = Confirm(ctx.author.id)
         await ctx.send(f'Are you sure you want to delete embed in Tag with ID: **{tag_id}**.\nNote: The tag will not be deleted and the embed can be added again using `b!tag update embed` command.\n**Warning: The tag needs at least content or embed to work properly.**', view=confirm)
         await confirm.wait()
@@ -551,6 +643,10 @@ class tags(commands.Cog):
 
     @delete.command(name='component')
     async def delete_component(self, ctx: BBContext, component_id: int): # must remove from each array where present
+        """
+        A command to remove a component from a tag.
+        """
+        
         confirm = Confirm(ctx.author.id)
         await ctx.send(f'Are you sure you want to delete the component with ID: **{component_id}**.', view=confirm)
         await confirm.wait()
@@ -568,6 +664,10 @@ class tags(commands.Cog):
 
     @tag.command(name='list', aliases=['show'])
     async def show(self, ctx: BBContext):
+        """
+        A command to list all available tags.
+        """
+        
         con = await ctx.get_connection()
         query = f'SELECT name, id FROM {TABLE_NAMES} ORDER BY name'
         rows = await con.fetch(query)
@@ -576,6 +676,10 @@ class tags(commands.Cog):
 
     @tag.command()
     async def search(self, ctx: BBContext, *, name: str):
+        """
+        A command to search from all available tags.
+        """
+        
         matches = difflib.get_close_matches(name, self.bot.tags, n=5)
 
         if matches:
@@ -587,6 +691,10 @@ class tags(commands.Cog):
 
     @create.command(name='alias')
     async def create_alias(self, ctx: BBContext, tag_id: int, *, alias_name: str):
+        """
+        A command to create an alias for a tag.
+        """
+        
         con = await ctx.get_connection()
         query = f'INSERT INTO {TABLE_NAMES}(name, id) VALUES($1, $2)'
 
@@ -602,6 +710,10 @@ class tags(commands.Cog):
 
     @delete.command(name='alias')
     async def delete_alias(self, ctx: BBContext, tag_id: int, *, alias_name: str):
+        """
+        A command to delete an alias from the tag.
+        """
+        
         con = await ctx.get_connection()
         async with con.transaction():
             query = 'SELECT COUNT(id) WHERE id = $1'
@@ -625,6 +737,10 @@ class tags(commands.Cog):
     @tag.command(aliases=['component'])
     @commands.has_guild_permissions(administrator=True)
     async def components(self, ctx: BBContext):
+        """
+        A command to list all components and their ids.
+        """
+        
         con = await ctx.get_connection()
         query = f'SELECT id, type, tag_id FROM {TABLE_COMPONENTS} ORDER BY id'
         rows = await con.fetch(query)

@@ -176,12 +176,20 @@ class shop(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def shop(self, ctx: BBContext):
+        """
+        A command to display the LDoE Shop.
+        """
+        
         shop = await Shop.fetch_with_items(ctx.author, self.bot)
         await shop.start(ctx.channel)
 
     @shop.command()
     @commands.has_guild_permissions(administrator=True)
     async def list(self, ctx: BBContext):
+        """
+        A command to display list of all items in shop and their ids.
+        """
+        
         con = await ctx.get_connection()
         query = f'SELECT id, name, amount FROM {TABLE_SHOP}'
         rows = await con.fetch(query)
@@ -191,6 +199,20 @@ class shop(commands.Cog):
     @shop.group()
     @commands.has_guild_permissions(administrator=True)
     async def add(self, ctx: BBContext, *, flags: ShopItemCreateFlags):
+        """
+        A command to add an item to the shop.
+
+        The available flags are:
+            -[name|n]
+            -[description|d] (optional)
+            -[emoji|e] (optional)
+            -[price|p]
+            -[stock|s] (optonal)
+            -[minimum_level|ml]
+            -[cooldown|c] (optional)
+            -[amount|a]
+        """
+        
         con = await ctx.get_connection()
         query = f'INSERT INTO {TABLE_SHOP}(name, description, emoji, price, currency, stock, minimum_level, cooldown, amount) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)'
         await con.execute(query, flags.name, flags.description, flags.emoji, flags.price, 'event coins', flags.stock, flags.minimum_level, flags.cooldown, flags.amount)
@@ -199,6 +221,10 @@ class shop(commands.Cog):
     @shop.group()
     @commands.has_guild_permissions(administrator=True)
     async def delete(self, ctx: BBContext, item_id: int):
+        """
+        A command to delete an item from the shop.
+        """
+        
         confirm = Confirm(ctx.author.id)
         await ctx.send(f'Are you sure you want to delete shop item with ID: {item_id}', view=confirm)
 
@@ -211,6 +237,21 @@ class shop(commands.Cog):
     @shop.group()
     @commands.has_guild_permissions(administrator=True)
     async def update(self, ctx: BBContext, *, flags: ShopItemUpdateFlags):
+        """
+        A command to update a shop item.
+
+        The available flags are:
+            -[id]
+            -[name|n] (optional)
+            -[description|d] (optional)
+            -[emoji|e] (optional)
+            -[price|p] (optional)
+            -[stock|s] (optonal)
+            -[minimum_level|ml] (optional)
+            -[cooldown|c] (optional)
+            -[amount|a] (optional)
+        """
+        
         columns = []
         args = []
         

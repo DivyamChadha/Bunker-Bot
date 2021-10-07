@@ -88,6 +88,10 @@ class profile(commands.Cog):
     @commands.command(name='profile')
     @commands.cooldown(1, 60.0, commands.BucketType.member)
     async def _profile(self, ctx: BBContext):
+        """
+        A command to view your LDoE server profile. Your profile includes general, events and clan info.
+        """
+        
         con = await ctx.get_connection()
 
         # Clan Data
