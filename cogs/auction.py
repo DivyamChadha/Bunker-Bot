@@ -152,6 +152,9 @@ class auction(commands.Cog):
     @commands.group(name='auction')
     @commands.has_guild_permissions(administrator=True)
     async def _auction(self, ctx: BBContext):
+        """
+        The base command for auction management commands.
+        """
         pass
 
     @_auction.command()
