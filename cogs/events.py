@@ -27,6 +27,10 @@ class events(commands.Cog):
 
     @commands.command()
     async def ea(self, ctx: BBContext, *, words: Optional[str] ='None'):
+        """
+        A command used in various events to submit answers anonymously. 
+        """
+
         eventslounge = ctx.guild.get_channel(events_lounge) # type: ignore (Direct messages intent is not being used so guild will not be none)
 
         if ctx.channel == eventslounge:
@@ -39,6 +43,10 @@ class events(commands.Cog):
 
     @commands.command()
     async def eventspart(self, ctx: BBContext, members: commands.Greedy[discord.Member]):
+        """
+        A command to add events participants role to multiple users at the same time.
+        """
+
         log_channel = ctx.guild.get_channel(server_logs) # type: ignore (Direct messages intent is not being used so guild will not be none)
 
         text = ''
@@ -58,6 +66,10 @@ class events(commands.Cog):
 
     @commands.command()
     async def eventsunpart(self, ctx: BBContext, members: commands.Greedy[discord.Member]):
+        """
+        A command to remove events participants role from multiple users at the same time.
+        """
+
         log_channel = ctx.guild.get_channel(server_logs) # type: ignore (Direct messages intent is not being used so guild will not be none)
 
         text = ''
@@ -134,45 +146,88 @@ class events(commands.Cog):
 
     @commands.group(case_insensitive=True)
     async def listen(self, ctx: BBContext):
+        """
+        The base command for various listeners that can be activated during an event to make hosting it easier.
+        """
         pass
 
     @listen.command(name='hangman')
     async def listen_hangman(self, ctx: BBContext):
+        """
+        A command that activates the hangman listener. This is used during the qualification round. 
+        When <:check:461172408909430814> emoji is reacted on the message from ea command (either from dyno or bunker bot) 
+        then events participants role is given to user who used the ea command.
+        """
+
         self.listen_hman = True
         await ctx.send(f'Listening to <:check:461172408909430814>')
     
     @listen.command(name='wordsearch')
     async def listen_wordsearch(self, ctx: BBContext):
+        """
+        A command that activates the word search listener.
+        This has the following reactions:
+
+        :one: : tags the person in #events-lounge and tells them they have one word wrong.
+        :two: : tags the person in #events-lounge and tells them they have two words wrong.
+        :arrow_double_up: : tags the person in #events-lounge and tells them they have three or more words wrong.
+        :third_place: : tags the person in #events-lounge and tells them they have 10 words correct.
+        :second_place: : tags the person in #events-lounge and tells them they have 15 words correct.
+        :first_place: : tags the person in #events-lounge and tells them they have 21 words correct.
+        """
+
         self.listen_ws = True
         reacts = ', '.join(WORD_SEARCH_REACTIONS.keys())
         await ctx.send(f'Listening to {reacts}')
 
     @commands.group(case_insensitive=True)
     async def unlisten(self, ctx: BBContext):
+        """
+        The base command for disabling event listeners.
+        """
         pass
 
     @unlisten.command(name='hangman')
     async def unlisten_hangman(self, ctx: BBContext):
+        """
+        The command to disable hangman listener.
+        """
+
         self.listen_hman = False
         self.hangman_players = []
         await ctx.send(f'Not listening to <:check:461172408909430814>')
     
     @unlisten.command(name='wordsearch')
     async def unlisten_wordsearch(self, ctx: BBContext):
+        """
+        The command to disable word search listener.
+        """
+
         self.listen_ws = False
         reacts = ', '.join(WORD_SEARCH_REACTIONS.keys())
         await ctx.send(f'Not listening to {reacts}')
 
     @commands.group()
     async def events(self, ctx: BBContext):
+        """
+        The base command for various events related commands.
+        """
         pass
 
     @events.group()
     async def coins(self, ctx: BBContext):
+        """
+        The base command for event coins related commands.
+        """
         pass
 
     @coins.command()
     async def add(self, ctx: BBContext, coins: int, member: discord.Member):
+        """
+        A command to add event coins to a member. The member must be at least lvl 1 on XP leaderboard.
+        This can also remove coins from the member if amount specified is negative.
+        """
+
         con = await ctx.get_connection()
         player = await LeaderboardPlayer.fetch(con, member)
 

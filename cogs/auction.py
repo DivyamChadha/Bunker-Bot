@@ -98,6 +98,9 @@ class auction(commands.Cog):
     @commands.command()
     @commands.cooldown(1, 60.0, commands.BucketType.member)
     async def goodies(self, ctx: BBContext):
+        """
+        A command used to view all available items in the ongoing auction.
+        """
 
         if not self.enabled:
             return await ctx.send('There is no auction being conducted right now.')
@@ -115,6 +118,9 @@ class auction(commands.Cog):
     @commands.command()
     @commands.cooldown(1, 60.0, commands.BucketType.member)
     async def bet(self, ctx: BBContext, bet_amount: int, *, item_name: str):
+        """
+        A command to bet event coins on an auction item.
+        """
 
         if not self.enabled:
             return await ctx.send('There is no auction being conducted right now.')
@@ -146,10 +152,22 @@ class auction(commands.Cog):
     @commands.group(name='auction')
     @commands.has_guild_permissions(administrator=True)
     async def _auction(self, ctx: BBContext):
+        """
+        The base command for auction management commands.
+        """
         pass
 
     @_auction.command()
     async def add(self, ctx: BBContext, *, flags: AuctionAddFlags):
+        """
+        A command to add an item to the auction. 
+        
+        Available flags are:
+        -name : The name of the item
+        -increment: The minimum increment for each bet
+        -time: The time in which this item will expire
+        """
+
         con = await ctx.get_connection()
         query = f'INSERT INTO {TABLE_AUCTION}(name, minimum_increment, active_till) VALUES($1, $2, $3)'
 
@@ -162,6 +180,10 @@ class auction(commands.Cog):
 
     @_auction.command()
     async def remove(self, ctx: BBContext, *, item_name: str):
+        """
+        A command to remove an item from the auction.
+        """
+
         con = await ctx.get_connection()
         query = f'DELETE FROM {TABLE_AUCTION} WHERE name = $1 RETURNING *'
         row = await con.fetchrow(query, item_name)
@@ -183,6 +205,14 @@ class auction(commands.Cog):
 
     @_auction.command()
     async def update(self, ctx: BBContext, *, flags: AuctionUpdateFlags):
+        """
+        A command to update an item in the auction. 
+        
+        Available flags are:
+        -increment: The minimum increment for each bet
+        -time: The time in which this item will expire
+        """
+
         if not (flags.increment or flags.time):
             return await ctx.send(f'You must either provide `-increment` or `-time`.')
 
@@ -211,6 +241,10 @@ class auction(commands.Cog):
 
     @_auction.command()
     async def toggle(self, ctx: BBContext):
+        """
+        A command to enabled or disable auctions.
+        """
+
         self.enabled = not self.enabled
         e = 'enabled.' if self.enabled else 'disabled.'
         await ctx.send(f'Auctions are now {e}')

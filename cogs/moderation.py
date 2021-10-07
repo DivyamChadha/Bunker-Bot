@@ -130,14 +130,6 @@ class BanRequests(EmbedViewPagination):
                     pass
 
             ids: List[int] = [req[0] for req in ban_requests]
-
-            # await con.execute(
-            #     'UPDATE moderation.moderation SET type = $1, completed = $2 where user_id = ANY($3::numeric[]) and completed = $4', 
-            #     'Mute + Ban', 
-            #     True, 
-            #     ids, 
-            #     False
-            #     )
             await con.execute('DELETE FROM moderation.banrequests WHERE user_id = ANY($1::numeric[])', ids)
 
             embed = discord.Embed(title=f'Banned {len(ids)} members', color=discord.Color.red())
@@ -402,18 +394,19 @@ class moderation(commands.Cog):
 
         async with self.bot.pool.acquire() as con:
             await con.execute('DELETE FROM moderation.banrequests WHERE user_id = $1', user_id)
-            # await con.execute('UPDATE moderation.moderation SET type = $1, completed = $2 where user_id = $3 and completed = $4', 
-            # 'Mute + Ban', 
-            # True, 
-            # user_id, 
-            # False
-            # )
 
         if unmute:
             await self._unmute(user_id, 0, reason=unmute_reason, update_db=False)
 
-    @commands.command(name='mute')
+    @commands.command(aliases=['m'])
     async def mute(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], time: TimeConverter, *, reason: str = None):
+        """
+        A command to mute a member. Minimum time is 5 minutes and maximum time is 1 week.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is muted.
+        """
+
         offender = self.resolve_user(ctx.message, user)
         if offender is None:
             return await ctx.send('No person found to mute.', delete_after=10)
@@ -442,6 +435,13 @@ class moderation(commands.Cog):
                 
     @commands.command()
     async def rban(self, ctx: BBContext, user: Optional[discord.Member], *, reason=None):
+        """
+        A command to give reaction ban role tp a member.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is reaction banned.
+        """
+
         offender = self.resolve_user(ctx.message, user)
         if offender is None or isinstance(offender, discord.User):
             return await ctx.send('No person found to react ban.', delete_after=10)
@@ -461,6 +461,13 @@ class moderation(commands.Cog):
 
     @commands.command(name='ban-request', aliases=['br'])
     async def ban_req(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User, int]], *, reason=None):
+        """
+        A command to submit a ban request for a user. The user is permanently muted.
+
+        Instead of providing the user in the command this can be used with a reply. If done so ban is requested
+        for the author of the message replied to.
+        """
+
         if isinstance(user, int):
             offender = user
         else:
@@ -488,6 +495,10 @@ class moderation(commands.Cog):
 
     @commands.command(aliases=['prune'])
     async def purge(self, ctx: BBContext, amount: int):
+        """
+        A command to delete a large amount of messages with ease.
+        """
+
         if isinstance(ctx.channel, (discord.DMChannel, discord.PartialMessageable, discord.GroupChannel)):
             return await ctx.send('This command is not available in this channel')
 
@@ -497,6 +508,13 @@ class moderation(commands.Cog):
 
     @commands.command(aliases=['k'])
     async def kick(self, ctx: BBContext, user: Optional[discord.Member], *, reason=None):
+        """
+        A command to kick a member from the server.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is kicked.
+        """
+
         offender = self.resolve_user(ctx.message, user)
         if offender is None or isinstance(offender, discord.User):
             return await ctx.send('No person found to kick.', delete_after=10)
@@ -509,6 +527,13 @@ class moderation(commands.Cog):
 
     @commands.command(aliases=['w'])
     async def warn(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
+        """
+        A command to warn a member.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is warned.
+        """
+
         offender = self.resolve_user(ctx.message, user)
         if offender is None:
             return await ctx.send('No person found to warn.', delete_after=10)
@@ -520,6 +545,14 @@ class moderation(commands.Cog):
 
     @commands.command(name='verbalwarn', aliases=['vw'])
     async def verbal_warn(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
+        """
+        A command to verbal warn a member. Verbal warnings are not displayed in mod logs and are only logged in
+        mute warn proof.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is verbal warned.
+        """
+
         offender = self.resolve_user(ctx.message, user)
         if offender is None:
             return await ctx.send('No person found to verbal warn.', delete_after=10)
@@ -528,6 +561,13 @@ class moderation(commands.Cog):
 
     @commands.command()
     async def ban(self, ctx: BBContext, user: Optional[discord.Object], *, reason=None):
+        """
+        A command to ban a member from the server.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is banned.
+        """
+
         if user:
             ldoe = self.bot.get_guild(LDOE)
             if not ldoe:
@@ -549,6 +589,13 @@ class moderation(commands.Cog):
 
     @commands.command()
     async def m5(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
+        """
+        A command to mute a member for 5 minutes.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is muted.
+        """
+
         offender = self.resolve_user(ctx.message, user)
         if offender is None:
             return await ctx.send('No person found to mute.', delete_after=10)
@@ -572,6 +619,10 @@ class moderation(commands.Cog):
 
     @commands.command(name='modlogs', aliases=['mod-logs', 'punishments'])
     async def mod_logs(self, ctx: BBContext, user: discord.User):
+        """
+        A command to display infractions for a member.
+        """
+
         async with self.bot.pool.acquire() as con:
             data = await con.fetch('SELECT case_id, message_id, type FROM moderation.moderation WHERE user_id= $1', user.id)
             mwf = self.bot.get_channel(mute_warn_proof)
@@ -580,6 +631,13 @@ class moderation(commands.Cog):
 
     @commands.command()
     async def unmute(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
+        """
+        A command to unmute a member.
+
+        Instead of providing the user in the command this can be used with a reply. If done so the author of the 
+        message replied to is unmuted.
+        """
+
         offender = self.resolve_user(ctx.message, user)
         if offender is None:
             return await ctx.send('No person found to unmute.', delete_after=10)
@@ -594,19 +652,15 @@ class moderation(commands.Cog):
 
     @commands.command()
     async def removereq(self, ctx: BBContext, ids: commands.Greedy[int]):
-        
+        """
+        A command to remove ban request from multiple users. This only works with user ids. Any invalid id 
+        is ignored and all valid users are unmuted and ban request is removed.
+        """
+
         async with self.bot.pool.acquire() as con:
 
             for id in ids:
                 if await self.db_check_br(id):
-
-                    # await con.execute('UPDATE moderation.moderation SET type = $1, completed = $2 where user_id = $3 and completed = $4', 
-                    # 'Ban Request Cancelled', 
-                    # True, 
-                    # id, 
-                    # False
-                    # )
-
                     await self._unmute(id, 0, reason='Ban Request cancelled' ,update_db=False)
             
             await con.execute('DELETE FROM moderation.banrequests WHERE user_id = ANY($1::numeric[])', ids)
@@ -615,6 +669,10 @@ class moderation(commands.Cog):
 
     @commands.command(name="allreqs")
     async def all_requests(self, ctx: BBContext):
+        """
+        A command to view all ban requests and quick ban these users.
+        """
+
         async with self.bot.pool.acquire() as con:
             ban_requests = await con.fetch("select user_tag, reason, message_link, staff_tag FROM moderation.banrequests")
             if ban_requests:
@@ -623,25 +681,13 @@ class moderation(commands.Cog):
             else:
                 await ctx.send('No ban requests found')
 
-
-    # @commands.Cog.listener()
-    # async def on_member_update(self, before: discord.Member, after: discord.Member):
-    #     ldoe = self.bot.get_guild(LDOE)
-
-    #     if not ldoe:
-    #         self.logger.debug('Guild not found in on_member_update in moderation cog')
-    #         return
-
-    #     muted_role = ldoe.get_role(muted)
-    #     if not muted_role:
-    #         self.logger.debug('Muted role not found in on_member_update in moderation cog')
-    #         return
-
-    #     if muted_role in before.roles and muted_role not in after.roles:
-    #         self.logger.info('Muted Role removed for %s (%s)', str(after), after.id)
-
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User):
+        """
+        Listener to check if a member for whom ban was requested for is banned. If so the request is removed
+        from the database.
+        """
+
         if guild.id != LDOE:
             return
         
@@ -650,6 +696,10 @@ class moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        """
+        Listener to check if a member who just joined has an active mute or ban request. If so the user is muted.
+        """
+
         if member.guild.id != LDOE:
             return
         
@@ -658,6 +708,10 @@ class moderation(commands.Cog):
 
     @tasks.loop(seconds=UNMUTE_LOOP_TIME)
     async def unmute_task(self) -> None:
+        """
+        A task loop to periodically fetch and remove mutes.
+        """
+
         async with self.bot.pool.acquire() as con:
             rows: Optional[List[asyncpg.Record]] = await con.fetch(
                 'SELECT user_id, time_remove FROM moderation.moderation WHERE completed=$1 and type=$2 and (time_remove - $3) < $4',

@@ -17,6 +17,10 @@ class crater(commands.Cog):
 
     @commands.command()
     async def pvp(self, ctx: BBContext):
+        """
+        A convinience command to display when pvp is available to play again in LDoE.
+        """
+
         current_date = discord.utils.utcnow()
 
         # check whether or not pvp starts in more than an hour or less than an hour
@@ -43,12 +47,18 @@ class crater(commands.Cog):
 
     @commands.group()
     @commands.has_guild_permissions(administrator=True)
-    # base class for clan commands
     async def clan(self, ctx: BBContext):
+        """
+        The base command for clan commands
+        """
         pass
 
     @clan.command(name='register')
     async def register_clan(self, ctx: BBContext, name: str, leader: discord.User):
+        """
+        A command to register a clan. Once a clan is registred the clan leader will be able to set 
+        the description, tag, banner etc which will be then displayed in all the clan member's profiles.
+        """
 
         # insert the new clan and get the clan_id to also insert the leader as a clan_member
         con = await ctx.get_connection()
@@ -65,6 +75,10 @@ class crater(commands.Cog):
 
     @clan.command(name='set-description',aliases=['setdescription'])
     async def set_description(self, ctx: BBContext, *, description: str):
+        """
+        A command to set the description of the clan. This can only be set by the clan leader.
+        """
+
         con = await ctx.get_connection()
         query = 'UPDATE clans.clan SET description = $1 WHERE leader_id = $2'
 
@@ -74,6 +88,10 @@ class crater(commands.Cog):
 
     @clan.command(name='set-banner', aliases=['setbanner'])
     async def set_banner(self, ctx: BBContext, url: str):
+        """
+        A command to set the clan banner. This can only be set by the clan leader.
+        """
+
         con = await ctx.get_connection()
         query = 'UPDATE clans.clan SET banner_url = $1 WHERE leader_id = $2'
 
@@ -82,6 +100,9 @@ class crater(commands.Cog):
 
     @clan.command(name='add-member', aliases=['addmember'])
     async def add_member(self, ctx: BBContext, member: discord.Member, *, role: Optional[str]):
+        """
+        A command to add a user to the clan. This can only be used by the clan leader.
+        """
 
         role = 'Member' if role is None else role
         # if no role is specified or they misspelled the role, their default role is member
@@ -107,6 +128,10 @@ class crater(commands.Cog):
 
     @clan.command(name='remove-member', aliases=['removemmember'])
     async def remove_member(self, ctx: BBContext, member: discord.Member):
+        """
+        A command to remove a user from the clan. This can only be used by the clan leader.
+        """
+
         con = await ctx.get_connection()
         query = '''DELETE FROM clans.clan_members WHERE 
                    clan_id = (SELECT clan_id FROM clans.clan WHERE leader_id = $2)
@@ -117,6 +142,10 @@ class crater(commands.Cog):
 
     @clan.command(name='set-language', aliases=['sl', 'setlanguage'])
     async def set_language(self, ctx: BBContext, language: str):
+        """
+        A command to set the language for the clan. This can only be set by the clan leader.
+        """
+
         con = await ctx.get_connection()
         query = 'UPDATE clans.clan SET clan_language = $1 WHERE leader_id = $2'
 
@@ -125,6 +154,10 @@ class crater(commands.Cog):
 
     @clan.command(name='set-tag', aliases=['settag'])
     async def set_clan_tag(self, ctx: BBContext, tag: str):
+        """
+        A command to set the clan tag. This can only be set by the clan leader.
+        """
+
         tag = tag.upper()
 
         con = await ctx.get_connection()
@@ -135,6 +168,10 @@ class crater(commands.Cog):
 
     @clan.command(aliases=['l', 'leaveclan'])
     async def leave(self, ctx: BBContext):
+        """
+        A command to leave a clan you were added to.
+        """
+
         con = await ctx.get_connection()
 
         query = '''WITH existing_clan as (SELECT * FROM clans.clan WHERE leader_id = $1)
@@ -147,6 +184,10 @@ class crater(commands.Cog):
 
     @clan.command(name='swap-leader', aliases=['swapleader'])
     async def swap_leader(self, ctx:BBContext, old_leader: discord.Member, new_leader: discord.Member):
+        """
+        A command to change the leader of a clan.
+        """
+
         con = await ctx.get_connection()
 
         # 1. updates leader_id in the clan table first

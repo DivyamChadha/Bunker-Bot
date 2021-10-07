@@ -343,6 +343,10 @@ class game(commands.Cog):
     
     @commands.command(aliases=['tasks']) # TODO name?
     async def task(self, ctx: BBContext):
+        """
+        A bunker bot special game. Complete tasks given to you by MR.K and earn tickets!
+        """
+
         con = await ctx.get_connection()
         query = f'SELECT time FROM {TABLE_GAME_TTL} WHERE user_id = $1'
 

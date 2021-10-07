@@ -90,6 +90,11 @@ class ambassador(commands.Cog):
 
     @commands.command(name='staff', aliases=['flare'])
     async def flare(self, ctx: BBContext, *, reason: str = 'Reason not provided') -> None:
+        """
+        A simple and quick way to get a staff member’s attention when it’s needed. Rather than trying to find one who is actually available, 
+        this posts a sos message in staff chat allowing a staff member who is free to claim the issue and help you out.
+        """
+        
         staff = self.bot.get_channel(staff_lounge)
         flares: List[Flare] = []
 
@@ -106,6 +111,10 @@ class ambassador(commands.Cog):
 
     @commands.command(name='redalert', aliases=['red-alert'])
     async def red_alert(self, ctx: BBContext, *, reason: str = 'Reason not provided') -> None:
+        """
+        An elevated flare command that pings all online staff member (@here). For emergencies only.
+        """
+
         staff = self.bot.get_channel(staff_lounge)
         flares: List[Flare] = []
 
@@ -122,6 +131,10 @@ class ambassador(commands.Cog):
 
     @commands.command(aliases=['whois'])
     async def userinfo(self, ctx: BBContext, *, person: Optional[discord.Member] = None) -> None:
+        """
+        A command to get useful information about an user or yourself.
+        """
+        
         if not person:
             person = ctx.author # type: ignore (Direct messages intent is not being used so author will not be a member)
 
@@ -144,6 +157,10 @@ class ambassador(commands.Cog):
 
     @commands.command(aliases=['members'])
     async def inrole(self, ctx: BBContext, *, role: discord.Role) -> None:
+        """
+        A command to find all the members having a certain role.
+        """
+
         predicate: Callable[[discord.Member], bool] = lambda member: role in member.roles
         members: List[Optional[discord.Member]] = [member for member in ctx.guild.members if predicate(member)] # type: ignore (Direct messages intent is not being used so guild will not be none)
 

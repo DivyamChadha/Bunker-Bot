@@ -165,6 +165,7 @@ class bunkercode(commands.Cog):
 
         :return: None
         """
+        
         if message.author.bot or message.channel.id in BUNKER_CODE_DENIED or not self.code_enabled:
             return
 
@@ -196,26 +197,37 @@ class bunkercode(commands.Cog):
     @commands.group()
     @commands.has_guild_permissions(administrator=True)
     async def settings(self, ctx: BBContext):
-        """Base command for all settings related to bunker code module. This does nothing on its own"""
+        """
+        The base command for all settings related to bunker code module.
+        """
         pass
 
     @settings.command()
     async def update(self, ctx: BBContext, *, codes: str):
-        """Update the codes for the entire month. Codes must be separated by space and be in order of day"""
+        """
+        A command to update the codes for the entire month. Codes must be separated by space and be in order of day.
+        """
+
         self._update_codes(codes)
         await ctx.tick(True)
 
     @settings.command(name='specific-update', aliases=['su'])
     async def specific_update(self, ctx: BBContext, day: int, code: str):
-        """Update the code for a specific day"""
+        """
+        A command to update the code for a specific day.
+        """
+
         self._codes[int(day) - 1] = code
         self._update_codes(' '.join(self._codes))
         await ctx.tick(True)
 
     @settings.command(name='early-update', aliases=['eu', 'earlyupdate'])
     async def early_update(self, ctx: BBContext, *, codes: str):
-        """Schedule an update which occurs exactly at 12:00am gmt0. Codes must be separated by space and be in order
-        of day"""
+        """
+        A command to schedule an update which occurs exactly at 12:00 AM GMT-0. Codes must be separated by space and be in order
+        of day.
+        """
+
         await ctx.release_connection()
 
         current_date = discord.utils.utcnow()
@@ -239,13 +251,19 @@ class bunkercode(commands.Cog):
 
     @settings.command()
     async def toggle(self, ctx: BBContext):
-        """Toggles if the bunker code auto response has been enabled"""
+        """
+        A command to toggle if the bunker code auto response has been enabled.
+        """
+
         self.code_enabled = not self.code_enabled
         await ctx.send(f"Bunker code auto reaction has been set to: **{self.code_enabled}**")
 
     @settings.command(name='add-image', aliases=['ai'])
     async def add_img(self, ctx: BBContext, url: str, artist: Optional[discord.User] = None):
-        """Adds an image to the bunker bot code images"""
+        """
+        A command to add an image to the bunker bot code images.
+        """
+
         art = Art(url, artist.id, artist.name) if artist else Art(url)
         con = await ctx.get_connection()
         query = f'INSERT INTO {TABLE_ARTS}(url, artist_id, artist_name) VALUES($1, $2, $3)'
@@ -255,7 +273,10 @@ class bunkercode(commands.Cog):
 
     @settings.command(name='remove-image', aliases=['ri'])
     async def remove_img(self, ctx: BBContext, url: str):
-        """Removes an image from the bunker bot code images"""
+        """
+        A command to remove an image from the bunker bot code images.
+        """
+
         con = await ctx.get_connection()
         query = f'DELETE FROM {TABLE_ARTS} WHERE url = $1'
 
@@ -264,6 +285,10 @@ class bunkercode(commands.Cog):
 
     @commands.command()
     async def artists(self, ctx: BBContext):
+        """
+        A command to display all the artists who have contributed arts to bunker bot images. Developer arts are not included.
+        """
+
         query = """SELECT DISTINCT artist_name, COUNT(*)
                     FROM extras.arts
                     WHERE artist_name IS NOT NULL
@@ -279,6 +304,11 @@ class bunkercode(commands.Cog):
 
     @commands.command()
     async def arts(self, ctx: BBContext, artist: Optional[discord.Member] = None):
+        """
+        A command to display a small amount of arts present in the bunker bot contributed by various artists. Not all arts 
+        are shown and are selected randomly.
+        """
+
         if artist:
             query = f'SELECT url, artist_name FROM {TABLE_ARTS} WHERE artist_id = $1 LIMIT 20'
             args = [query, artist.id]

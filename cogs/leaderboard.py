@@ -81,11 +81,18 @@ class leaderboard(commands.Cog):
 
     @commands.group()
     async def level(self, ctx: BBContext):
+        """
+        The base command for level related commands.
+        """
         pass
 
     @level.group(invoke_without_subcommand=True)
     @commands.has_guild_permissions(administrator=True)
     async def config(self, ctx: BBContext):
+        """
+        The base command for configuring level. When no subcommand is used this displays all the levels and their xp required.
+        """
+
         con = await ctx.get_connection()
         query = f'SELECT level, required_xp, prize FROM {TABLE_LB_CONFIG}'
 
@@ -96,6 +103,10 @@ class leaderboard(commands.Cog):
     @commands.command(name='leaderboard', aliases=['lb'])
     @commands.cooldown(1, 60.0, commands.BucketType.member)
     async def show_leaderboard(self, ctx: BBContext):
+        """
+        A command to show top members in the XP leaderboard.
+        """
+
         con = await ctx.get_connection()
         query = f'SELECT user_id, xp FROM {TABLE_LEADERBOARD} ORDER BY xp DESC LIMIT 100'
         rows = await con.fetch(query)
