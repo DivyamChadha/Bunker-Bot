@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from discord.ext import commands, tasks
 from random import randint, choices
 from typing import List, Optional, Tuple, Dict
+from utils.checks import spam_channel_only, is_beta_tester
 from utils.levels import LeaderboardPlayer
 
 
@@ -341,7 +342,9 @@ class game(commands.Cog):
             await con.execute(query, user_id)
         del self.game_tasks[str(user_id)]
     
-    @commands.command(aliases=['tasks']) # TODO name?
+    @commands.command(aliases=['tasks'])
+    @is_beta_tester()
+    @spam_channel_only()
     async def task(self, ctx: BBContext):
         """
         A bunker bot special game. Complete tasks given to you by MR.K and earn tickets!

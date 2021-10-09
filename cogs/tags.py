@@ -8,6 +8,7 @@ from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands
 from typing import Dict, List, Optional, Union
+from utils.checks import is_staff_or_support
 from utils.views import Confirm, EmbedViewPagination
 
 
@@ -272,6 +273,7 @@ class tags(commands.Cog):
         self.bot = bot
 
     @commands.group(invoke_without_command=True, aliases=['tags', 't'])
+    @is_staff_or_support()
     async def tag(self, ctx: BBContext, *, name: str):
         """
         A command to display a tag.
@@ -313,6 +315,7 @@ class tags(commands.Cog):
             await ctx.send(row['content'])
 
     @tag.group(invoke_without_command=True)
+    @commands.has_guild_permissions(administrator=True)
     async def create(self, ctx: BBContext, name: str, *, content: str):
         """
         A command to create a tag. While creating a tag it is required to provide content, however 
@@ -401,6 +404,7 @@ class tags(commands.Cog):
             await ctx.send(f'Select Option with ID: {component_id} has been created. You can now use this ID in `b!tag add-component` command to add to it a tag.')
 
     @tag.group()
+    @commands.has_guild_permissions(administrator=True)
     async def update(self, ctx: BBContext) -> None:
         """
         The base command for commands related to updating a tag.
@@ -537,6 +541,7 @@ class tags(commands.Cog):
             await ctx.tick()
 
     @tag.command(name='add-component', aliases=['addcomponent', 'ac'])
+    @commands.has_guild_permissions(administrator=True)
     async def add_component(self, ctx: BBContext, tag_id: int, component_id: int):
         """
         A command to add a component to a tag. Components are buttons and selects.
@@ -555,6 +560,7 @@ class tags(commands.Cog):
             await ctx.send(f'Tag with ID: **{tag_id}** does not exist')
     
     @tag.command(name='remove-component', aliases=['removecomponent', 'rc'])
+    @commands.has_guild_permissions(administrator=True)
     async def remove_component(self, ctx: BBContext, tag_id: int, component_id: int):
         """
         A command to remove a component from a tag. Components are buttons and selects.
@@ -570,6 +576,7 @@ class tags(commands.Cog):
         await ctx.send(f'Tag with ID: **{tag_id}** does not exist')
 
     @tag.group(invoke_without_command=True)
+    @commands.has_guild_permissions(administrator=True)
     async def delete(self, ctx: BBContext, tag_id: int): # must remove any component pointing to it as well
         """
         A command to delete a tag. This also acts as a base command for other tag delete sub commands.
@@ -663,6 +670,7 @@ class tags(commands.Cog):
             await ctx.send(f'Component with ID: **{component_id}** does not exist.')
 
     @tag.command(name='list', aliases=['show'])
+    @is_staff_or_support()
     async def show(self, ctx: BBContext):
         """
         A command to list all available tags.
@@ -675,6 +683,7 @@ class tags(commands.Cog):
         await view.start(ctx.channel)
 
     @tag.command()
+    @is_staff_or_support()
     async def search(self, ctx: BBContext, *, name: str):
         """
         A command to search from all available tags.

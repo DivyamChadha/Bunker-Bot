@@ -7,6 +7,7 @@ from context import BBContext
 from datetime import timedelta
 from discord.ext import commands
 from typing import Dict, List, Optional, Union
+from utils.checks import spam_channel_only, is_event_coord, is_beta_tester
 from utils.constants import COINS, TICKET
 from utils.converters import TimeConverter
 from utils.levels import LeaderboardPlayer
@@ -175,6 +176,8 @@ class shop(commands.Cog):
         self.bot = bot
 
     @commands.group(invoke_without_command=True)
+    @spam_channel_only()
+    @is_beta_tester()
     async def shop(self, ctx: BBContext):
         """
         A command to display the LDoE Shop.

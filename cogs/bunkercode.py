@@ -7,6 +7,7 @@ from context import BBContext
 from datetime import datetime, timezone
 from discord.ext import commands
 from typing import Any, List, NamedTuple, Optional
+from utils.checks import spam_channel_only
 from utils.constants import BUNKER_CODE_DENIED
 from utils.views import EmbedViewPagination
 
@@ -284,6 +285,7 @@ class bunkercode(commands.Cog):
         await ctx.tick(True)
 
     @commands.command()
+    @spam_channel_only()
     async def artists(self, ctx: BBContext):
         """
         A command to display all the artists who have contributed arts to bunker bot images. Developer arts are not included.
@@ -303,6 +305,7 @@ class bunkercode(commands.Cog):
         await view.start(ctx.channel)
 
     @commands.command()
+    @spam_channel_only()
     async def arts(self, ctx: BBContext, artist: Optional[discord.Member] = None):
         """
         A command to display a small amount of arts present in the bunker bot contributed by various artists. Not all arts 

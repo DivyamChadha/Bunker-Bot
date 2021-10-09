@@ -6,8 +6,8 @@ from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands, tasks
 from typing import Callable, Dict, List, Union
-from utils.constants import TABLE_LB_CONFIG, TABLE_LEADERBOARD, TICKET, NO_XP_CHANNELS, COINS
-from utils.levels import LeaderboardPlayer
+from utils.checks import spam_channel_only
+from utils.constants import TABLE_LB_CONFIG, TABLE_LEADERBOARD, NO_XP_CHANNELS
 from utils.views import EmbedViewPagination
 
 
@@ -80,6 +80,7 @@ class leaderboard(commands.Cog):
         await self.bot.update_xp()
 
     @commands.group()
+    @commands.has_guild_permissions(administrator=True)
     async def level(self, ctx: BBContext):
         """
         The base command for level related commands.
@@ -87,7 +88,6 @@ class leaderboard(commands.Cog):
         pass
 
     @level.group(invoke_without_subcommand=True)
-    @commands.has_guild_permissions(administrator=True)
     async def config(self, ctx: BBContext):
         """
         The base command for configuring level. When no subcommand is used this displays all the levels and their xp required.
@@ -102,6 +102,7 @@ class leaderboard(commands.Cog):
 
     @commands.command(name='leaderboard', aliases=['lb'])
     @commands.cooldown(1, 60.0, commands.BucketType.member)
+    @spam_channel_only()
     async def show_leaderboard(self, ctx: BBContext):
         """
         A command to show top members in the XP leaderboard.

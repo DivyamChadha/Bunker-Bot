@@ -6,6 +6,7 @@ from context import BBContext
 from discord.ext import commands
 from random import choice
 from typing import Callable, List, Optional
+from utils.checks import is_staff_or_support
 from utils.constants import staff_lounge, ambassadors_lounge, training_room
 from utils.views import EmbedViewPagination
 
@@ -89,6 +90,7 @@ class ambassador(commands.Cog):
         self.bot = bot
 
     @commands.command(name='staff', aliases=['flare'])
+    @is_staff_or_support()
     async def flare(self, ctx: BBContext, *, reason: str = 'Reason not provided') -> None:
         """
         A simple and quick way to get a staff member’s attention when it’s needed. Rather than trying to find one who is actually available, 
@@ -110,6 +112,7 @@ class ambassador(commands.Cog):
         await staff.send(embed=flare.staff, view=FlareView(flares)) # type: ignore
 
     @commands.command(name='redalert', aliases=['red-alert'])
+    @is_staff_or_support()
     async def red_alert(self, ctx: BBContext, *, reason: str = 'Reason not provided') -> None:
         """
         An elevated flare command that pings all online staff member (@here). For emergencies only.
@@ -130,6 +133,7 @@ class ambassador(commands.Cog):
         await staff.send('@here', embed=flare.staff, view=FlareView(flares)) # type: ignore
 
     @commands.command(aliases=['whois'])
+    @is_staff_or_support()
     async def userinfo(self, ctx: BBContext, *, person: Optional[discord.Member] = None) -> None:
         """
         A command to get useful information about an user or yourself.
@@ -151,11 +155,12 @@ class ambassador(commands.Cog):
         embed.add_field(name='Account', value=f'Created on: {created_on}\nJoined on: {joined_on}\nJoin positon: {join_position}')
         embed.add_field(name='Roles', value=', '.join(roles), inline=False)
         embed.add_field(name='Permissions', value=', '.join(permissions), inline=False)
-        embed.set_thumbnail(url=person.avatar.url) # type: ignore
+        embed.set_thumbnail(url=person.display_avatar.url) # type: ignore
 
         await ctx.send(embed=embed)
 
     @commands.command(aliases=['members'])
+    @is_staff_or_support()
     async def inrole(self, ctx: BBContext, *, role: discord.Role) -> None:
         """
         A command to find all the members having a certain role.

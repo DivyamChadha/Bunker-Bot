@@ -10,6 +10,7 @@ from context import BBContext
 from datetime import datetime, time, timedelta
 from discord.ext import commands, tasks
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from utils.checks import is_staff, is_staff_or_guide, has_kick_permissions
 from utils.constants import mute_warn_proof, muted, react_banned, LDOE
 from utils.converters import TimeConverter
 from utils.logs import create_logger, create_handler
@@ -399,6 +400,7 @@ class moderation(commands.Cog):
             await self._unmute(user_id, 0, reason=unmute_reason, update_db=False)
 
     @commands.command(aliases=['m'])
+    @is_staff()
     async def mute(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], time: TimeConverter, *, reason: str = None):
         """
         A command to mute a member. Minimum time is 5 minutes and maximum time is 1 week.
@@ -434,6 +436,7 @@ class moderation(commands.Cog):
         self.logger.info('%s muted %s (%s) for %s', str(ctx.author), str(offender), offender.id, reason)
                 
     @commands.command()
+    @is_staff()
     async def rban(self, ctx: BBContext, user: Optional[discord.Member], *, reason=None):
         """
         A command to give reaction ban role tp a member.
@@ -460,6 +463,7 @@ class moderation(commands.Cog):
         
 
     @commands.command(name='ban-request', aliases=['br'])
+    @is_staff()
     async def ban_req(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User, int]], *, reason=None):
         """
         A command to submit a ban request for a user. The user is permanently muted.
@@ -494,6 +498,7 @@ class moderation(commands.Cog):
         await ctx.message.delete()
 
     @commands.command(aliases=['prune'])
+    @is_staff()
     async def purge(self, ctx: BBContext, amount: int):
         """
         A command to delete a large amount of messages with ease.
@@ -507,6 +512,7 @@ class moderation(commands.Cog):
             
 
     @commands.command(aliases=['k'])
+    @has_kick_permissions()
     async def kick(self, ctx: BBContext, user: Optional[discord.Member], *, reason=None):
         """
         A command to kick a member from the server.
@@ -526,6 +532,7 @@ class moderation(commands.Cog):
         await ctx.message.delete()
 
     @commands.command(aliases=['w'])
+    @is_staff()
     async def warn(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
         """
         A command to warn a member.
@@ -544,6 +551,7 @@ class moderation(commands.Cog):
         await ctx.message.delete()
 
     @commands.command(name='verbalwarn', aliases=['vw'])
+    @is_staff()
     async def verbal_warn(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
         """
         A command to verbal warn a member. Verbal warnings are not displayed in mod logs and are only logged in
@@ -560,6 +568,7 @@ class moderation(commands.Cog):
         await self.log('Verbal Warn', ctx.author, offender, ctx.channel, reason=reason, quick_ban_request=False)
 
     @commands.command()
+    @commands.has_guild_permissions(administrator=True)
     async def ban(self, ctx: BBContext, user: Optional[discord.Object], *, reason=None):
         """
         A command to ban a member from the server.
@@ -588,6 +597,7 @@ class moderation(commands.Cog):
         await ctx.message.delete()
 
     @commands.command()
+    @is_staff_or_guide()
     async def m5(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
         """
         A command to mute a member for 5 minutes.
@@ -618,6 +628,7 @@ class moderation(commands.Cog):
         await self._unmute(offender.id, 300, reason='Mute Expired', update_db=False)
 
     @commands.command(name='modlogs', aliases=['mod-logs', 'punishments'])
+    @is_staff()
     async def mod_logs(self, ctx: BBContext, user: discord.User):
         """
         A command to display infractions for a member.
@@ -630,6 +641,7 @@ class moderation(commands.Cog):
             await view.start(ctx.channel)
 
     @commands.command()
+    @is_staff()
     async def unmute(self, ctx: BBContext, user: Optional[Union[discord.Member, discord.User]], *, reason=None):
         """
         A command to unmute a member.
@@ -651,6 +663,7 @@ class moderation(commands.Cog):
         await self._unmute(offender.id, 0, reason=reason or 'Not Provided')
 
     @commands.command()
+    @commands.has_guild_permissions(administrator=True)
     async def removereq(self, ctx: BBContext, ids: commands.Greedy[int]):
         """
         A command to remove ban request from multiple users. This only works with user ids. Any invalid id 
@@ -668,6 +681,7 @@ class moderation(commands.Cog):
         await ctx.send('Ban request has been removed for the given IDs')
 
     @commands.command(name="allreqs")
+    @commands.has_guild_permissions(administrator=True)
     async def all_requests(self, ctx: BBContext):
         """
         A command to view all ban requests and quick ban these users.
