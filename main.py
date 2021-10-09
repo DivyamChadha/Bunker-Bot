@@ -32,7 +32,6 @@ def run_bot():
         raise RuntimeError('Connection pool not acquired. Terminating connection...')
 
     bot = BunkerBot()
-    # bot.db = DatabaseManager(pool)
     bot.pool = pool
     bot.logger = logger
 
@@ -40,5 +39,10 @@ def run_bot():
     bot.load_extension('manager')
     bot.run(config['discord']['token'])
 
+    for handler in dpy_logger.handlers:
+        handler.close()
+
+    for handler in logger.handlers:
+        handler.close()
 
 run_bot()

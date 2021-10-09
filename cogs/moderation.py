@@ -164,6 +164,9 @@ class moderation(commands.Cog):
     def cog_unload(self) -> None:
         for task in self.unmute_tasks.values():
             task.cancel()
+        
+        for handler in self.logger.handlers:
+            handler.close()
 
     def resolve_user(self, message: discord.Message, user: Optional[Union[discord.Member, discord.User, Any]] = None) -> Optional[Union[discord.Member, discord.User]]:
         if isinstance(user, (discord.Member, discord.User)):
