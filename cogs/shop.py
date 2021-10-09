@@ -58,7 +58,6 @@ class ShopSelect(discord.ui.Select):
             if item.stock <= 0:
                 return await interaction.response.send_message('This item is out of stock. You can not buy it right now', ephemeral=True)
 
-
         if item.currency == 'tickets':
             if item.price > self.view.player.tickets:
                 return await interaction.response.send_message(f'You do not have enough tickets to buy **{item.name}**', ephemeral=True)
@@ -67,7 +66,6 @@ class ShopSelect(discord.ui.Select):
                 return await interaction.response.send_message(f'You do not have enough event coins to buy **{item.name}**', ephemeral=True)
         else:
             raise ValueError(f'Invalid currency: {item.currency} for item: {item.name} with ID: {item.id}')
-
 
         async with self.view.bot.pool.acquire() as con:
             con: asyncpg.Connection
@@ -86,7 +84,7 @@ class ShopSelect(discord.ui.Select):
                 # Event Coins are also transffered via the same if bought
 
                 await interaction.response.send_message(f'You just bought **{item.amount} {item.name}**! If this is an in-game item a staff member will contact you soon!')
-
+                self.view.bot.logger.info('Shop item (%s) %d purchased by %s for %d %d', str(item.id), item.name, str(self.view.player), item.price, item.currency)
 
 class Shop(EmbedViewPagination):
     def __init__(self, player: LeaderboardPlayer, bot: BunkerBot, items: List[ShopItem]) -> None:
@@ -220,6 +218,7 @@ class shop(commands.Cog):
         query = f'INSERT INTO {TABLE_SHOP}(name, description, emoji, price, currency, stock, minimum_level, cooldown, amount) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)'
         await con.execute(query, flags.name, flags.description, flags.emoji, flags.price, 'event coins', flags.stock, flags.minimum_level, flags.cooldown, flags.amount)
         await ctx.tick()
+        self.bot.logger.info('Shop item added by %s with the following flags: %s', str(ctx.author), str(flags))
 
     @shop.group()
     @commands.has_guild_permissions(administrator=True)
@@ -236,6 +235,7 @@ class shop(commands.Cog):
             con = await ctx.get_connection()
             query = f'DELETE FROM {TABLE_SHOP} WHERE id = $1'
             await con.execute(query, item_id)
+            self.bot.logger.info('Auction item with ID: %d deleted by %s', str(item_id), str(ctx.author))
 
     @shop.group()
     @commands.has_guild_permissions(administrator=True)
@@ -307,6 +307,7 @@ class shop(commands.Cog):
              await ctx.send(f'No shop item found with ID: **{flags.id}**')
         else:
             await ctx.tick()
+            self.bot.logger.info('Shop item updated by %s with the following flags: %s', str(ctx.author), str(flags))
 
 
 def setup(bot: BunkerBot) -> None:

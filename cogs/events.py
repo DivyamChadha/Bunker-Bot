@@ -242,6 +242,7 @@ class events(commands.Cog):
 
         await player.update(con, coins=coins)
         await ctx.tick()
+        self.bot.logger.info('%s Event coins given to %s by %s', coins, str(member), str(ctx.author))
 
 def setup(bot: BunkerBot) -> None:
     bot.add_cog(events(bot))

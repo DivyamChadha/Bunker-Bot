@@ -19,6 +19,7 @@ def run_bot():
     config.read('confidential.ini')
 
     logger = logs.create_logger('bunkerbot', level=logging.DEBUG)
+    logger.addHandler(logs.create_handler('bunkerbot'))
 
     dpy_logger = logs.create_logger('discord', level=logging.DEBUG)
     dpy_logger.addHandler(logs.create_handler('discord'))

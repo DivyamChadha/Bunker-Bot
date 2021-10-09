@@ -70,6 +70,7 @@ class crater(commands.Cog):
         try:
             await con.execute(query, name, leader.id, 'Leader')
             await ctx.tick(True)
+            self.bot.logger.info('Clan %s with leader %s has been registered by %s', name, str(leader), str(ctx.author))
         except asyncpg.exceptions.UniqueViolationError:
             await ctx.send('You have already registered a clan!')
 

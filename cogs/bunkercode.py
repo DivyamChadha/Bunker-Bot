@@ -211,6 +211,7 @@ class bunkercode(commands.Cog):
 
         self._update_codes(codes)
         await ctx.tick(True)
+        self.bot.logger.info('Bunker codes updated by %s : %s', str(ctx.author), codes)
 
     @settings.command(name='specific-update', aliases=['su'])
     async def specific_update(self, ctx: BBContext, day: int, code: str):
@@ -221,6 +222,7 @@ class bunkercode(commands.Cog):
         self._codes[int(day) - 1] = code
         self._update_codes(' '.join(self._codes))
         await ctx.tick(True)
+        self.bot.logger.info('Bunker codes updated for day %s by %s : %s', day, str(ctx.author), code)
 
     @settings.command(name='early-update', aliases=['eu', 'earlyupdate'])
     async def early_update(self, ctx: BBContext, *, codes: str):
@@ -249,6 +251,7 @@ class bunkercode(commands.Cog):
 
         self._update_codes(codes)
         await ctx.send("Codes have been updated")
+        self.bot.logger.info('Bunker codes updated by %s : %s', str(ctx.author), codes)
 
     @settings.command()
     async def toggle(self, ctx: BBContext):
@@ -257,7 +260,9 @@ class bunkercode(commands.Cog):
         """
 
         self.code_enabled = not self.code_enabled
-        await ctx.send(f"Bunker code auto reaction has been set to: **{self.code_enabled}**")
+        e = 'enabled.' if self.code_enabled else 'disabled.'
+        await ctx.send(f"Bunker code auto reaction has been : **{e}**")
+        self.bot.logger.info('Bunker code listener %s by %s', e, str(ctx.author))
 
     @settings.command(name='add-image', aliases=['ai'])
     async def add_img(self, ctx: BBContext, url: str, artist: Optional[discord.User] = None):

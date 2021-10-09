@@ -14,10 +14,6 @@ from utils.levels import LeaderboardPlayer
 from utils.views import EmbedViewPagination
 
 
-TABLE_AUCTION = 'events.auctions'
-TABLE_AUCTION_LOG = 'events.auctions_log'
-
-
 class AuctionItem:
     __slots__ = ('id', 'name', '_current_bet', 'minimum_increment', 'active_till', 'current_holder')
 
@@ -35,7 +31,7 @@ class AuctionItem:
 
     @classmethod
     async def fetch(cls, item_name: str, con: asyncpg.Connection) -> Optional[AuctionItem]:
-        query = f'SELECT id, name, current_bet, minimum_increment, active_till, current_holder FROM {TABLE_AUCTION} where name = $1'
+        query = 'SELECT id, name, current_bet, minimum_increment, active_till, current_holder FROM events.auctions where name = $1'
         row = await con.fetchrow(query, item_name)
         if not row:
             return None
@@ -109,7 +105,7 @@ class auction(commands.Cog):
             return await ctx.send('There is no auction being conducted right now.')
 
         con = await ctx.get_connection()
-        query = f'SELECT id, name, current_bet, minimum_increment, active_till, current_holder FROM {TABLE_AUCTION} WHERE active_till > $1'
+        query = 'SELECT id, name, current_bet, minimum_increment, active_till, current_holder FROM events.auctions WHERE active_till > $1'
         rows = await con.fetch(query, discord.utils.utcnow())
 
         if rows:    
@@ -150,9 +146,10 @@ class auction(commands.Cog):
         if player.coins < bet_amount:
             return await ctx.send(f'You only have **{player.coins}** {COINS} lol.')
 
-        query = f'INSERT INTO {TABLE_AUCTION_LOG}(user_id, item_id, bet_amount, time, item_name, old_bet, old_user_id) VALUES($1, $2, $3, $4, $5, $6, $7)'
+        query = 'INSERT INTO events.auctions_log(user_id, item_id, bet_amount, time, item_name, old_bet, old_user_id) VALUES($1, $2, $3, $4, $5, $6, $7)'
         await con.execute(query, ctx.author.id, item.id, bet_amount, discord.utils.utcnow(), item.name, item.current_bet, item.current_holder)
         await ctx.tick()
+        self.bot.logger.info('%d bet on auction item (%s) %d for %d event coins', str(ctx.author), item.id, item.name, bet_amount)
 
     @commands.group(name='auction')
     @commands.has_guild_permissions(administrator=True)
@@ -174,7 +171,7 @@ class auction(commands.Cog):
         """
 
         con = await ctx.get_connection()
-        query = f'INSERT INTO {TABLE_AUCTION}(name, minimum_increment, active_till) VALUES($1, $2, $3)'
+        query = 'INSERT INTO events.auctions(name, minimum_increment, active_till) VALUES($1, $2, $3)'
 
         try:
             await con.execute(query, flags.name, flags.increment, discord.utils.utcnow()  + timedelta(seconds=flags.time)) # type: ignore
@@ -182,6 +179,8 @@ class auction(commands.Cog):
             await ctx.send(f'Auction item with name **{flags.name}** already exists')
         else:
             await ctx.tick()
+        
+        self.bot.logger.info('New auction item added by %s with the following flags: %s', str(ctx.author), str(flags))
 
     @_auction.command()
     async def remove(self, ctx: BBContext, *, item_name: str):
@@ -190,7 +189,7 @@ class auction(commands.Cog):
         """
 
         con = await ctx.get_connection()
-        query = f'DELETE FROM {TABLE_AUCTION} WHERE name = $1 RETURNING *'
+        query = 'DELETE FROM events.auctions WHERE name = $1 RETURNING *'
         row = await con.fetchrow(query, item_name)
 
         if not row:
@@ -207,6 +206,7 @@ class auction(commands.Cog):
         description = f'\nMinimum next bet: {item.next_bet} {COINS}\nEnds on {item.expires_in}\n({current_holder}: {item.current_bet} {COINS})'
         embed = discord.Embed(title=f'Deleted: {row["name"]}', description=description)
         await ctx.send(embed=embed)
+        self.bot.logger.info('Auction item deleted by %s: Name: %s ID: %s, Holder: %s, Current Bet: %s', str(ctx.author), item.name, item.id, current_holder, item.current_bet)
 
     @_auction.command()
     async def update(self, ctx: BBContext, *, flags: AuctionUpdateFlags):
@@ -234,7 +234,7 @@ class auction(commands.Cog):
 
         con = await ctx.get_connection()
         cols = ', '.join(f'{col}=${i+2}' for i, col in enumerate(columns))
-        query = f'UPDATE {TABLE_AUCTION} SET {cols} WHERE name = $1'
+        query = f'UPDATE events.auctions SET {cols} WHERE name = $1'
         args.insert(0, flags.name)
         args.insert(0, query)
         
@@ -243,6 +243,8 @@ class auction(commands.Cog):
              await ctx.send(f'No auction item found with name: **{flags.name}**')
         else:
             await ctx.tick()
+        
+        self.bot.logger.info('Auction item updated by %s with the following flags: %s', str(ctx.author), str(flags))
 
     @_auction.command()
     async def toggle(self, ctx: BBContext):
@@ -253,6 +255,7 @@ class auction(commands.Cog):
         self.enabled = not self.enabled
         e = 'enabled.' if self.enabled else 'disabled.'
         await ctx.send(f'Auctions are now {e}')
+        self.bot.logger.info('Auction %s by %s', e, str(ctx.author))
 
 
 
