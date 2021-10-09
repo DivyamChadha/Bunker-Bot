@@ -4,6 +4,7 @@ from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands
 from typing import List, Mapping, Optional, Union
+from utils.constants import SPAM_CHANNELS
 from utils.views import EmbedViewPagination
 
 
@@ -59,14 +60,16 @@ class BBHelp(commands.HelpCommand):
 
             subcmds = []
             for cmd in filtered_commands:
-
-                subcmds.append('`f{cmd.name}`\n{cmd.short_doc}')
+                subcmds.append(f'`{cmd.name}`\n{cmd.short_doc}')
             
             embed.add_field(name='Sub-Commands', value='\n'.join(subcmds), inline=False)
 
         return embed
 
     async def send_bot_help(self, mapping: Mapping[Optional[commands.Cog], List[commands.Command]]):
+        if self.context.channel.id not in SPAM_CHANNELS:
+            dest: discord.abc.MessageableChannel = self.get_destination()
+            return await dest.send('The help command is limited to spam channels only.', delete_after=10.0)
 
         items: List[discord.Embed] = []
 
@@ -105,6 +108,10 @@ class BBHelp(commands.HelpCommand):
         await view.start(self.get_destination())
 
     async def send_cog_help(self, cog: commands.Cog):
+        if self.context.channel.id not in SPAM_CHANNELS:
+            dest: discord.abc.MessageableChannel = self.get_destination()
+            return await dest.send('The help command is limited to spam channels only.', delete_after=10.0)
+
         items: List[discord.Embed] = []
         base = discord.Embed(title=f'{cog.qualified_name}', description = f'{cog.description}\n\n')
         items.append(base)
@@ -116,15 +123,19 @@ class BBHelp(commands.HelpCommand):
                 if cmd.parent is None:
                     base.description += f'`{self.get_command_signature(cmd)}`\n{cmd.short_doc}\n\n'
 
-                if isinstance(cmd, commands.Command):
-                    items.append(self._format_command(cmd))
-                else:
+                if isinstance(cmd, commands.Group):
                     items.append(await self._format_group(cmd))
+                else:
+                    items.append(self._format_command(cmd))
 
         view = HelpView(self.context.author, items)
         await view.start(self.get_destination())    
 
     async def send_group_help(self, group: commands.Group):
+        if self.context.channel.id not in SPAM_CHANNELS:
+            dest: discord.abc.MessageableChannel = self.get_destination()
+            return await dest.send('The help command is limited to spam channels only.', delete_after=10.0)
+
         items: List[discord.Embed] = []
         base = discord.Embed(title=self.get_command_signature(group), description=f'{group.help}\n\n')
         items.append(base)
@@ -132,18 +143,21 @@ class BBHelp(commands.HelpCommand):
         filtered_commands = await self.filter_commands(group.walk_commands(), sort=True)
         if filtered_commands:
             for cmd in filtered_commands:
-                if cmd.parent is None:
-                    base.description += f'{cmd.name}: `{cmd.short_doc}`\n\n'
+                base.description += f'{cmd.name}: `{cmd.short_doc}`\n\n'
 
-                if isinstance(cmd, commands.Command):
-                    items.append(self._format_command(cmd))
-                else:
+                if isinstance(cmd, commands.Group):
                     items.append(await self._format_group(cmd))
+                else:
+                    items.append(self._format_command(cmd))
 
         view = HelpView(self.context.author, items)
         await view.start(self.get_destination())    
        
     async def send_command_help(self, command: commands.Command):
+        if self.context.channel.id not in SPAM_CHANNELS:
+            dest: discord.abc.MessageableChannel = self.get_destination()
+            return await dest.send('The help command is limited to spam channels only.', delete_after=10.0)
+
         dest = self.get_destination()
         await dest.send(embed=self._format_command(command))
 

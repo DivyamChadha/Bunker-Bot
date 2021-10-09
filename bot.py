@@ -1,4 +1,3 @@
-import re
 import asyncpg
 import discord
 import logging
@@ -6,7 +5,6 @@ import logging
 from context import BBContext
 from discord.ext import commands
 from typing import Callable, Dict, List, Optional, Set, Union
-from utils.constants import TABLE_LEADERBOARD
 
 
 async def release_connection(ctx: BBContext) -> None:
@@ -43,6 +41,7 @@ class BunkerBot(commands.Bot):
         )
 
         self._after_invoke = release_connection
+        self.beta_testers: Set[int] = set()
         self.blacklist: Set[int] = set()
         self.tags: Set[str] = set()
         self.times_code_is_asked: int = 0
@@ -58,6 +57,10 @@ class BunkerBot(commands.Bot):
             tags = await con.fetchval('SELECT array_agg(name) FROM tags.names')
             if tags:
                 self.tags = set(tags)
+
+            testers = await con.fetchval('SELECT array_agg(user_id) FROM extras.beta_testers')
+            if testers:
+                self.beta_testers = set(testers)
 
         return await super().start(token, reconnect=reconnect)
 
@@ -83,10 +86,10 @@ class BunkerBot(commands.Bot):
         async with self.pool.acquire() as con:
             _data = self.xp_cache.copy()
             self.xp_cache = {}
-            query = f'INSERT INTO {TABLE_LEADERBOARD}(user_id, xp) \
-                      VALUES($1, $2) \
-                      ON CONFLICT(user_id) \
-                      DO UPDATE SET xp = {TABLE_LEADERBOARD}.xp + $2'
+            query = 'INSERT INTO events.leaderboard(user_id, xp) \
+                     VALUES($1, $2) \
+                     ON CONFLICT(user_id) \
+                     DO UPDATE SET xp = events.leaderboard.xp + $2'
             await con.executemany(query, _data.items())
 
     async def getch_member(self, guild: discord.Guild, user_id: int) -> Union[discord.Member, int]:

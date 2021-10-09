@@ -5,6 +5,7 @@ from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands
 from typing import Optional
+from utils.checks import spam_channel_only
 from utils.constants import COINS, DOGTAGS, TICKET
 from utils.levels import LeaderboardPlayer
 
@@ -87,6 +88,7 @@ class profile(commands.Cog):
 
     @commands.command(name='profile')
     @commands.cooldown(1, 60.0, commands.BucketType.member)
+    @spam_channel_only()
     async def _profile(self, ctx: BBContext):
         """
         A command to view your LDoE server profile. Your profile includes general, events and clan info.

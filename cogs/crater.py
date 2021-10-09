@@ -5,7 +5,8 @@ import re
 from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands
-from typing import Optional, List
+from typing import Optional
+from utils.checks import is_clan_coord, is_clan_leader, spam_channel_only
 
 
 CLAN_ROLES_REGEX = re.compile(r'\b(members|right hand|officer|recruit)\b', re.IGNORECASE)
@@ -46,7 +47,6 @@ class crater(commands.Cog):
             await ctx.tick(True)
 
     @commands.group()
-    @commands.has_guild_permissions(administrator=True)
     async def clan(self, ctx: BBContext):
         """
         The base command for clan commands
@@ -54,6 +54,7 @@ class crater(commands.Cog):
         pass
 
     @clan.command(name='register')
+    @is_clan_coord()
     async def register_clan(self, ctx: BBContext, name: str, leader: discord.User):
         """
         A command to register a clan. Once a clan is registred the clan leader will be able to set 
@@ -74,6 +75,8 @@ class crater(commands.Cog):
 
 
     @clan.command(name='set-description',aliases=['setdescription'])
+    @is_clan_leader()
+    @spam_channel_only()
     async def set_description(self, ctx: BBContext, *, description: str):
         """
         A command to set the description of the clan. This can only be set by the clan leader.
@@ -85,6 +88,8 @@ class crater(commands.Cog):
 
 
     @clan.command(name='set-banner', aliases=['setbanner'])
+    @is_clan_leader()
+    @spam_channel_only()
     async def set_banner(self, ctx: BBContext, url: str):
         """
         A command to set the clan banner. This can only be set by the clan leader.
@@ -97,6 +102,8 @@ class crater(commands.Cog):
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
     @clan.command(name='add-member', aliases=['addmember'])
+    @is_clan_leader()
+    @spam_channel_only()
     async def add_member(self, ctx: BBContext, member: discord.Member, *, role: Optional[str]):
         """
         A command to add a user to the clan. This can only be used by the clan leader.
@@ -125,6 +132,8 @@ class crater(commands.Cog):
             await ctx.send('Member is already in a clan!')
 
     @clan.command(name='remove-member', aliases=['removemmember'])
+    @is_clan_leader()
+    @spam_channel_only()
     async def remove_member(self, ctx: BBContext, member: discord.Member):
         """
         A command to remove a user from the clan. This can only be used by the clan leader.
@@ -139,6 +148,8 @@ class crater(commands.Cog):
         await self.check_error(result, 'Member is not in a clan, not in your clan, or you are not leader of a clan', ctx)
 
     @clan.command(name='set-language', aliases=['sl', 'setlanguage'])
+    @is_clan_leader()
+    @spam_channel_only()
     async def set_language(self, ctx: BBContext, language: str):
         """
         A command to set the language for the clan. This can only be set by the clan leader.
@@ -151,6 +162,8 @@ class crater(commands.Cog):
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
     @clan.command(name='set-tag', aliases=['settag'])
+    @is_clan_leader()
+    @spam_channel_only()
     async def set_clan_tag(self, ctx: BBContext, tag: str):
         """
         A command to set the clan tag. This can only be set by the clan leader.
@@ -165,6 +178,7 @@ class crater(commands.Cog):
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
     @clan.command(aliases=['l', 'leaveclan'])
+    @spam_channel_only()
     async def leave(self, ctx: BBContext):
         """
         A command to leave a clan you were added to.
@@ -181,6 +195,7 @@ class crater(commands.Cog):
 
 
     @clan.command(name='swap-leader', aliases=['swapleader'])
+    @is_clan_coord()
     async def swap_leader(self, ctx:BBContext, old_leader: discord.Member, new_leader: discord.Member):
         """
         A command to change the leader of a clan.

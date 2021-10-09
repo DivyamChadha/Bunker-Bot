@@ -49,6 +49,7 @@ class eh(commands.Cog):
             await ctx.send(str(error), delete_after=10)
 
         elif isinstance(error, commands.CheckFailure):
+            print(error.args)
             await ctx.tick(False)
         
         else:

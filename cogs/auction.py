@@ -7,6 +7,7 @@ from context import BBContext
 from datetime import datetime, timedelta
 from discord.ext import commands
 from typing import List, Optional
+from utils.checks import is_beta_tester, spam_channel_only
 from utils.constants import COINS
 from utils.converters import TimeConverter
 from utils.levels import LeaderboardPlayer
@@ -97,6 +98,8 @@ class auction(commands.Cog):
 
     @commands.command()
     @commands.cooldown(1, 60.0, commands.BucketType.member)
+    @is_beta_tester()
+    @spam_channel_only()
     async def goodies(self, ctx: BBContext):
         """
         A command used to view all available items in the ongoing auction.
@@ -117,6 +120,8 @@ class auction(commands.Cog):
     
     @commands.command()
     @commands.cooldown(1, 60.0, commands.BucketType.member)
+    @is_beta_tester()
+    @spam_channel_only()
     async def bet(self, ctx: BBContext, bet_amount: int, *, item_name: str):
         """
         A command to bet event coins on an auction item.

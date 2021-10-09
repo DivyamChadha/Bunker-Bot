@@ -4,6 +4,7 @@ from bot import BunkerBot
 from context import BBContext
 from discord.ext import commands
 from typing import List, Optional
+from utils.checks import is_event_coord
 from utils.constants import events_lounge, events_answers, events_participants, server_logs
 from utils.levels import LeaderboardPlayer
 
@@ -42,6 +43,7 @@ class events(commands.Cog):
             await ctx.send(f'This command is only usable in {eventslounge.mention}', allowed_mentions=discord.AllowedMentions.none()) # type: ignore (We can guarantee here that events lounge will not be none)
 
     @commands.command()
+    @is_event_coord()
     async def eventspart(self, ctx: BBContext, members: commands.Greedy[discord.Member]):
         """
         A command to add events participants role to multiple users at the same time.
@@ -65,6 +67,7 @@ class events(commands.Cog):
         await ctx.tick()
 
     @commands.command()
+    @is_event_coord()
     async def eventsunpart(self, ctx: BBContext, members: commands.Greedy[discord.Member]):
         """
         A command to remove events participants role from multiple users at the same time.
@@ -145,6 +148,7 @@ class events(commands.Cog):
             self.hangman_players = []
 
     @commands.group(case_insensitive=True)
+    @is_event_coord()
     async def listen(self, ctx: BBContext):
         """
         The base command for various listeners that can be activated during an event to make hosting it easier.
@@ -181,6 +185,7 @@ class events(commands.Cog):
         await ctx.send(f'Listening to {reacts}')
 
     @commands.group(case_insensitive=True)
+    @is_event_coord()
     async def unlisten(self, ctx: BBContext):
         """
         The base command for disabling event listeners.
@@ -208,6 +213,7 @@ class events(commands.Cog):
         await ctx.send(f'Not listening to {reacts}')
 
     @commands.group()
+    @is_event_coord()
     async def events(self, ctx: BBContext):
         """
         The base command for various events related commands.
