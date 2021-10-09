@@ -1,11 +1,9 @@
 import asyncio
 import asyncpg
-import discord
 import logging
 
 from bot import BunkerBot
 from configparser import ConfigParser
-from discord.ext import commands
 from utils import logs
 
 try:
