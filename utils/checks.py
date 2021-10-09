@@ -51,15 +51,6 @@ def has_kick_permissions():
             raise commands.CheckFailure('This command is limited to global moderators and above only.')
     return commands.check(predicate)
 
-# def is_admin():
-#     def predicate(ctx: BBContext) -> bool:
-#         role_ids = set(role.id for role in ctx.author.roles) # type: ignore (DM message intent is disabled, author will always be a member)
-#         if ret := any(role_id in ADMINS for role_id in role_ids):
-#             return ret
-#         else:
-#             raise commands.CheckFailure('This is an admin only command.')
-#     return commands.check(predicate)
-
 def is_clan_leader():
     def predicate(ctx: BBContext) -> bool:
         role_ids = set(role.id for role in ctx.author.roles) # type: ignore (DM message intent is disabled, author will always be a member)
