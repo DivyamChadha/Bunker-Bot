@@ -78,11 +78,9 @@ class crater(commands.Cog):
         """
         A command to set the description of the clan. This can only be set by the clan leader.
         """
-
         con = await ctx.get_connection()
         query = 'UPDATE clans.clan SET description = $1 WHERE leader_id = $2'
-
-        result = await con.execute(query, description, ctx.author)
+        result = await con.execute(query, description, ctx.author.id)
         await self.check_error(result, 'You are not a leader of a clan', ctx)
 
 
