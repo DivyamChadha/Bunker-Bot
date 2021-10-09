@@ -17,6 +17,6 @@ def create_logger(name: str, *, level=logging.WARNING) -> logging.Logger:
 
 def create_handler(name, *, format: Optional[str] = None, datefmt: Optional[str] = None) -> logging.Handler:
     handler = logging.FileHandler(filename=f'logs/{name}.log', encoding='utf-8')
-    formatter = logging.Formatter(format or '%(asctime)s:%(levelname)s:%(name)s: %(message)s', datefmt or '‘%Y-%m-%d %H:%M:%S,uuu’')
+    formatter = logging.Formatter(format or '%(asctime)s:%(levelname)s:%(name)s: %(message)s', datefmt or '‘%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     return handler
