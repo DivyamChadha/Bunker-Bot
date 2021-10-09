@@ -344,7 +344,7 @@ class moderation(commands.Cog):
             return
 
         if reason:
-            self.logger.info('%s unmuted. Reason: %s', reason)
+            self.logger.info('%s unmuted. Reason: %s', str(member), reason)
 
         if update_db:
             async with self.bot.pool.acquire() as con:
