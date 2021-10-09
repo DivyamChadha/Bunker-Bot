@@ -12,7 +12,7 @@ def is_beta_tester():
         if ret := ctx.author.id in ctx.bot.beta_testers:
             return ret
         else:
-            raise commands.CheckFailure('This command is currently limited to beta testers only.')
+            raise commands.CommandError('This command is currently limited to beta testers only.')
     return commands.check(predicate)
 
 def is_staff():
@@ -21,7 +21,7 @@ def is_staff():
         if ret := any(role_id in STAFF for role_id in role_ids):
             return ret
         else:
-            raise commands.CheckFailure('This is a staff only command.')
+            raise commands.CommandError('This is a staff only command.')
     return commands.check(predicate)
 
 def is_staff_or_guide():
@@ -30,7 +30,7 @@ def is_staff_or_guide():
         if ret := any(role_id in STAFF_AND_GUIDE for role_id in role_ids):
             return ret
         else:
-            raise commands.CheckFailure('This is command is limited to staff or staff in training only.')
+            raise commands.CommandError('This is command is limited to staff or staff in training only.')
     return commands.check(predicate)
 
 def is_staff_or_support():
@@ -39,7 +39,7 @@ def is_staff_or_support():
         if ret := any(role_id in STAFF_AND_SUPPORT for role_id in role_ids):
             return ret
         else:
-            raise commands.CheckFailure('This command is limited to staff and ambassadors only.')
+            raise commands.CommandError('This command is limited to staff and ambassadors only.')
     return commands.check(predicate)
 
 def has_kick_permissions():
@@ -48,7 +48,7 @@ def has_kick_permissions():
         if ret := any(role_id in ELEVATED_STAFF for role_id in role_ids):
             return ret
         else:
-            raise commands.CheckFailure('This command is limited to global moderators and above only.')
+            raise commands.CommandError('This command is limited to global moderators and above only.')
     return commands.check(predicate)
 
 def is_clan_leader():
@@ -57,7 +57,7 @@ def is_clan_leader():
         if ret := clan_leaders in role_ids:
             return ret
         else:
-            raise commands.CheckFailure('This is command is limited to clan leaders only.')
+            raise commands.CommandError('This is command is limited to clan leaders only.')
     return commands.check(predicate)
 
 def is_clan_coord():
@@ -66,7 +66,7 @@ def is_clan_coord():
         if ret := clan_cords in role_ids:
             return ret
         else:
-            raise commands.CheckFailure('This is command is limited to clan coordinators only.')
+            raise commands.CommandError('This is command is limited to clan coordinators only.')
     return commands.check(predicate)
 
 def is_event_coord():
@@ -75,7 +75,7 @@ def is_event_coord():
         if ret := events_coords in role_ids:
             return ret
         else:
-            raise commands.CheckFailure('This is command is limited to event coordinators only.')
+            raise commands.CommandError('This is command is limited to event coordinators only.')
     return commands.check(predicate)
 
 def spam_channel_only():
@@ -83,5 +83,5 @@ def spam_channel_only():
         if ret := ctx.channel.id in SPAM_CHANNELS:
             return ret
         else:
-            raise commands.CheckFailure('This command can only be used in one of the spam channels.')
+            raise commands.CommandError('This command can only be used in one of the spam channels.')
     return commands.check(predicate)

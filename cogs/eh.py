@@ -24,11 +24,10 @@ class eh(commands.Cog):
         error: Exception
             The Exception raised
         """
-
         await ctx.release_connection()
 
-        if ctx.command and ctx.command.has_error_handler:
-            return
+        if ctx.command and ctx.command.has_error_handler():
+                return
 
         if ctx.cog and ctx.cog.has_error_handler():
             return
@@ -49,8 +48,13 @@ class eh(commands.Cog):
             await ctx.send(str(error), delete_after=10)
 
         elif isinstance(error, commands.CheckFailure):
-            print(error.args)
             await ctx.tick(False)
+
+        elif isinstance(error, commands.CommandError):
+            if error.args:
+                await ctx.send(error.args[0], delete_after=10.0)
+            else:
+                await ctx.tick(False)
         
         else:
             print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
