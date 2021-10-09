@@ -60,7 +60,7 @@ class BBHelp(commands.HelpCommand):
             subcmds = []
             for cmd in filtered_commands:
 
-                subcmds.append(f'{cmd.name}: `{cmd.short_doc}`')
+                subcmds.append('`f{cmd.name}`\n{cmd.short_doc}')
             
             embed.add_field(name='Sub-Commands', value='\n'.join(subcmds), inline=False)
 
@@ -97,7 +97,7 @@ class BBHelp(commands.HelpCommand):
            if filtered_commands:
                 embed = discord.Embed(title=cog.qualified_name if cog else 'default', description='')
                 for cmd in filtered_commands:
-                    embed.description += f'{cmd.name}: `{cmd.short_doc}`\n\n'
+                    embed.description += f'`{cmd.name}`\n{cmd.short_doc}\n\n'
                    
                 items.append(embed)
 
@@ -114,7 +114,7 @@ class BBHelp(commands.HelpCommand):
             for cmd in filtered_commands:
 
                 if cmd.parent is None:
-                    base.description += f'{self.get_command_signature(cmd)}: `{cmd.short_doc}`\n\n'
+                    base.description += f'`{self.get_command_signature(cmd)}`\n{cmd.short_doc}\n\n'
 
                 if isinstance(cmd, commands.Command):
                     items.append(self._format_command(cmd))
